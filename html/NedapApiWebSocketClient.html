@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Nedap Renos WebSocket Test Client</title>
+    <script language="javascript" type="text/javascript">
+        var CLOSING = 2;
+        var CLOSED = 3;
+        var RECONNECT_DELAY = 5000;
+        var output;
+
+        function init() {
+          output = document.getElementById('output');
+          if ('WebSocket' in window) {
+            document.getElementById('initButton').disabled = false;
+            document.getElementById('subscribe').disabled = true;
+            document.getElementById('heartbeat').disabled = true;
+          } else {
+            writeError('Your browser does not support WebSocket. Please upgrade to the newer version.');
+            document.getElementById('initButton').disabled = true;
+          }
+
+        }
+
+        function initWebSocket() {
+          var ipAddress = document.getElementById('websocketUrl').value;
+          var url = "ws://" + ipAddress + "/api/v2/events";
+          writeToScreen("Opening Renos WebSocket " + url);
+          eventsWebSocket = new WebSocket(url, []);
+          eventsWebSocket.onopen = function(event) { onOpen(event, url) };
+          eventsWebSocket.onclose = function(event) { onClose(event, url) };
+          eventsWebSocket.onmessage = function(event) { onMessage(event) };
+          eventsWebSocket.onerror = function(event) { onError(event) };
+        }
+
+        function onOpen(event, url) {
+          document.getElementById('subscribe').disabled = false;
+          document.getElementById('heartbeat').disabled = false;
+          writeToScreen("Connected to Renos API WebSocket server " + url);
+        }
+
+        function onClose(event, url) {
+          writeToScreen("Disconnected from Renos API WebSocket server " + url);
+          reconnect();
+        }
+
+        function onMessage(event) {
+          var response = JSON.parse(event.data);
+          if (response.response != null) {
+            switch (response.response) {
+              default:
+                writeToScreen('<span style="color: blue;">Unrecognized response: ' + event.data + '</span>');
+              }
+          } else if (response.event != null) {
+              switch (response.event) {
+                case 'rf_alarm':
+                case 'ir_direction':
+                  writeToScreen('<span style="color: green;">Received ' + response.event + ', id ' + response.id + ', detected by ' + response.group + ' at ' + response.time + ' with direction ' + response.direction + '.</span');
+                  break;
+                case 'metal_alarm':
+                  writeToScreen('<span style="color: green;">Received ' + response.event + ', id ' + response.id + ', detected by ' + response.group + ' at ' + response.time + '.</span');
+                  break;
+                case 'rfid_alarm':
+                  writeToScreen('<span style="color: green;">Received ' + response.event + ' with epc ' + response.epc + ', id ' + response.id + ', detected by ' + response.group + ' at ' + response.time + ' with direction ' + response.direction +  '.</span');
+                  break;
+                case 'rfid_observation':
+                  writeToScreen('<span style="color: green;">Received ' + response.event + ' with id ' + response.id + ', at ' + response.time + ' with epcs:</span');
+                  for (i = 0; i < response.epc_list.length; i++) {
+                    var epc = response.epc_list[i];
+                    var text = '<span style="color: green;">&nbsp;&nbsp&nbsp&nbsp' + epc.epc + ' at ' + epc.time;
+                    if (epc.eas_status != null) {
+                      text += ' with status ' + epc.eas_status;
+                    }
+                    if (epc.group != null) {
+                      text += ' detected by ' + epc.group;
+                    }
+                    text += '</span'
+                    writeToScreen(text);
+                  }
+              }
+          }
+        }
+
+        function onError(event) {
+          if (webSocket.readyState != CLOSED) {
+            writeError(event.data);
+          }
+        }
+
+        function writeError(message) {
+          writeToScreen('<span style="color: red;">Error: ' + message + '</span>');
+        }
+
+        function sendHeartbeat() {
+          var heartbeat = new Object();
+          heartbeat.request = 'heartbeat';
+
+          var requestJson = JSON.stringify(heartbeat);
+          eventsWebSocket.send(requestJson);
+        }
+
+        function subscribe() {
+          var subscribe = new Object();
+          subscribe.request = 'subscribe';
+          subscribe.reference = 'WebSocket API HTML client';
+          subscribe.event_types = [];
+          var subscription = document.getElementById("subscription");
+          var checkboxes = subscription.getElementsByTagName("input");
+          for (var i = 0; i < checkboxes.length; i++) {
+            var checkbox = checkboxes[i];
+            if (checkbox.checked) {
+              subscribe.event_types.push(checkbox.value);
+            }
+          }
+          subscribe.include_events_since = document.getElementById("includeEventsSince").value;
+
+          var requestJson = JSON.stringify(subscribe);
+          eventsWebSocket.send(requestJson);
+        }
+
+        function writeToScreen(message) {
+          message = prependCurrentTime(message);
+          var pre = document.createElement('p');
+          pre.style.workWrap = "break-word";
+          pre.innerHTML = message;
+          output.appendChild(pre);
+        }
+
+        function prependCurrentTime(message) {
+          var time = new Date();
+          return time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds() + " " + message;
+        }
+
+        function reconnect() {
+          writeToScreen("Trying to reconnect to Renos WebSocket, wait " + RECONNECT_DELAY / 1000 + "s");
+          setTimeout(initWebSocket, RECONNECT_DELAY);
+        }
+
+        window.addEventListener('load', init, false);
+    </script>
+    <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+  <h2>Nedap Renos WebSocket Api V2 Client</h2>
+  <span>Please enter IP address on which Renos can be found: 
+    <input id="websocketUrl" type="text"/><button id="initButton" style="width:50px" onclick="initWebSocket()" >Init</button>
+  </span>
+  <div>
+      <button id="heartbeat" onclick="sendHeartbeat()">Send heartbeat</button>
+  </div>
+  <div id="subscription" style="width:400px">
+      <fieldset>
+          <legend>Subscribe to events</legend>
+          <input type="checkbox" id="rfEvents" value="rf_alarm"/> RF alarm events<br>
+          <input type="checkbox" id="rfidEvents" value="rfid_alarm" /> RFID alarm events<br>
+          <input type="checkbox" id="irDirection" value="ir_direction" /> IR direction events<br>
+          <input type="checkbox" id="metalAlarm" value="metal_alarm" /> Metal alarm<br>
+          <input type="checkbox" id="rfidObservation" value="rfid_observation" /> RFID observation events<br>
+          Include events since <i>(e.g., 2015-02-27T08:09:08.670Z)</i>: <input type="text" id="includeEventsSince" style="width:150px"/> <br><br>
+          <button id="subscribe" onclick="subscribe()">Subscribe</button>
+      </fieldset>
+  </div>
+  <div id="output"></div>
+</body>
+</html>
