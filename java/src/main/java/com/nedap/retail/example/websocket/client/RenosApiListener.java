@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
+import com.nedap.retail.renos.api.v2.ws.message.Epc;
 import com.nedap.retail.renos.api.v2.ws.message.Event;
 import com.nedap.retail.renos.api.v2.ws.message.Response;
 import com.nedap.retail.renos.api.v2.ws.message.RfidAlarmEvent;
@@ -63,7 +64,7 @@ public class RenosApiListener implements WebSocketListener {
             case RFID_OBSERVATION: {
                 final RfidObservationEvent rfidObservationEvent = (RfidObservationEvent) event;
                 LOG.info("Received {} with id {} at {} with EPCs:", event.type, event.id, event.time);
-                for (RfidObservationEvent.Epc epc : rfidObservationEvent.epcs) {
+                for (Epc epc : rfidObservationEvent.epcs) {
                     LOG.info("   {} at {} {} {}", epc.epc, epc.time,
                             epc.easStatus != null ? "with status " + epc.easStatus : "",
                             epc.group != null ? "by group " + epc.group : "");
