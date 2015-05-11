@@ -1,6 +1,7 @@
 package com.nedap.retail.example.websocket.client;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import com.nedap.retail.renos.api.v2.ws.message.Epc;
 import com.nedap.retail.renos.api.v2.ws.message.Event;
 import com.nedap.retail.renos.api.v2.ws.message.Response;
 import com.nedap.retail.renos.api.v2.ws.message.RfidAlarmEvent;
+import com.nedap.retail.renos.api.v2.ws.message.RfidMoveEvent;
 import com.nedap.retail.renos.api.v2.ws.message.RfidObservationEvent;
 
 /**
@@ -64,16 +66,25 @@ public class RenosApiListener implements WebSocketListener {
             case RFID_OBSERVATION: {
                 final RfidObservationEvent rfidObservationEvent = (RfidObservationEvent) event;
                 LOG.info("Received {} with id {} at {} with EPCs:", event.type, event.id, event.time);
-                for (Epc epc : rfidObservationEvent.epcs) {
-                    LOG.info("   {} at {} {} {}", epc.epc, epc.time,
-                            epc.easStatus != null ? "with status " + epc.easStatus : "",
-                            epc.group != null ? "by group " + epc.group : "");
-                }
+                printEpcs(rfidObservationEvent.epcs);
                 break;
             }
+            case RFID_MOVE:
+                final RfidMoveEvent rfidMoveEvent = (RfidMoveEvent) event;
+                LOG.info("Received {} with id {} at {}, direction {} with EPCs:", event.type, event.id, event.time, event.direction);
+                printEpcs(rfidMoveEvent.epcs);
+                break;
             default:
                 LOG.info("Unknown event type received {}", event.type);
                 break;
+        }
+    }
+
+    private void printEpcs(final List<Epc> epcs) {
+        for (final Epc epc : epcs) {
+            LOG.info("   {} at {} {} {}", epc.epc, epc.time,
+                    epc.easStatus != null ? "with status " + epc.easStatus : "",
+                    epc.group != null ? "by group " + epc.group : "");
         }
     }
 

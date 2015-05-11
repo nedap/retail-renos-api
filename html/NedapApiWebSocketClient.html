@@ -65,19 +65,28 @@
                   break;
                 case 'rfid_observation':
                   writeToScreen('<span style="color: green;">Received ' + response.event + ' with id ' + response.id + ', at ' + response.time + ' with epcs:</span');
-                  for (i = 0; i < response.epc_list.length; i++) {
-                    var epc = response.epc_list[i];
-                    var text = '<span style="color: green;">&nbsp;&nbsp&nbsp&nbsp' + epc.epc + ' at ' + epc.time;
-                    if (epc.eas_status != null) {
-                      text += ' with status ' + epc.eas_status;
-                    }
-                    if (epc.group != null) {
-                      text += ' detected by ' + epc.group;
-                    }
-                    text += '</span'
-                    writeToScreen(text);
-                  }
+                  printEpcs(response.epc_list);
+                  break;
+                case 'rfid_move':
+                  writeToScreen('<span style="color: green;">Received ' + response.event + ' with id ' + response.id + ', at ' + response.time + ' direction ' + response.direction + ' with epcs:</span');
+                  printEpcs(response.epc_list);
+                  break;
               }
+          }
+        }
+
+        function printEpcs(epcs) {
+          for (i = 0; i < epcs.length; i++) {
+            var epc = epcs[i];
+            var text = '<span style="color: green;">&nbsp;&nbsp&nbsp&nbsp' + epc.epc + ' at ' + epc.time;
+            if (epc.eas_status != null) {
+              text += ' with status ' + epc.eas_status;
+            }
+            if (epc.group != null) {
+              text += ' detected by ' + epc.group;
+            }
+            text += '</span';
+            writeToScreen(text);
           }
         }
 
@@ -156,6 +165,7 @@
           <input type="checkbox" id="irDirection" value="ir_direction" /> IR direction events<br>
           <input type="checkbox" id="metalAlarm" value="metal_alarm" /> Metal alarm<br>
           <input type="checkbox" id="rfidObservation" value="rfid_observation" /> RFID observation events<br>
+          <input type="checkbox" id="rfidMove" value="rfid_move" /> RFID move events<br>
           Include events since <i>(e.g., 2015-02-27T08:09:08.670Z)</i>: <input type="text" id="includeEventsSince" style="width:150px"/> <br><br>
           <button id="subscribe" onclick="subscribe()">Subscribe</button>
       </fieldset>
