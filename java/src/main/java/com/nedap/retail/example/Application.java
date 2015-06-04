@@ -56,11 +56,11 @@ public class Application {
                 }
 
                 // check what choice has been made
-                char keycode = input.charAt(0);
+                final char keycode = input.charAt(0);
                 handleCommand(inputBuffer, keycode);
             }
             client.finish();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             LOG.error("An error has occurred, system will exit", e);
             exit();
         }
@@ -70,6 +70,7 @@ public class Application {
         // print line
         LOG.info("------------------------------------------------------");
         LOG.info("Available commands:");
+        LOG.info("    a) authenticate against Renos");
         LOG.info("    h) send heartbeat to Renos");
         LOG.info("    i) get system information from Renos");
         LOG.info("    s) get system status from Renos");
@@ -86,6 +87,9 @@ public class Application {
             throws IOException, InterruptedException, URISyntaxException {
         try {
             switch (keycode) {
+                case 'a':
+                    handleBasicAuthentication(inputBuffer);
+                    break;
                 case 'h':
                     sendHeartbeat(inputBuffer);
                     break;
@@ -117,6 +121,19 @@ public class Application {
         }
     }
 
+    private static void handleBasicAuthentication(final BufferedReader inputBuffer) throws Exception {
+        LOG.info("Please supply credentials needed for authentication against Renos API.");
+        LOG.info("Credentials are only needed if basic authentication is enabled for Renos.");
+        LOG.info("If that's not the case, feel free to press Enter when asked for username and password");
+        LOG.info("");
+        LOG.info("Please enter username:");
+        final String username = inputBuffer.readLine();
+        LOG.info("Please enter password:");
+        final String password = inputBuffer.readLine();
+        api.setUsername(username);
+        api.setPassword(password);
+    }
+
     private static void sendHeartbeat(final BufferedReader inputBuffer) throws Exception {
         LOG.info("Please choose protocol to send heartbeat:");
         LOG.info("  1. REST");
@@ -128,7 +145,7 @@ public class Application {
         }
 
         // check what choice has been made
-        char keycode = input.charAt(0);
+        final char keycode = input.charAt(0);
         switch (keycode) {
             case '1':
                 api.heartbeat();
@@ -143,7 +160,7 @@ public class Application {
     }
 
     private static void retrieveSystemInfo() throws Exception {
-        SystemInfo info = api.retrieveSystemInfo();
+        final SystemInfo info = api.retrieveSystemInfo();
         LOG.info("System info");
         LOG.info("System id: {}", info.id);
         LOG.info("Firmware version: {}", info.version);
@@ -151,7 +168,7 @@ public class Application {
     }
 
     private static void retrieveSystemStatus() throws Exception {
-        SystemStatus status = api.retrieveSystemStatus();
+        final SystemStatus status = api.retrieveSystemStatus();
         LOG.info("System status");
         LOG.info("Unreachable units: {}", status.unreachableUnits != 0);
         LOG.info("Device management connection error: {}", status.deviceManagementConnectionError != 0);
@@ -160,7 +177,7 @@ public class Application {
     }
 
     private static void retrieveSystemSettings() throws Exception {
-        Settings settings = api.retrieveSystemSettings();
+        final Settings settings = api.retrieveSystemSettings();
         LOG.info("System settings");
         LOG.info("RF enabled {}", settings.enableRf);
         LOG.info("RFID enabled {}", settings.enableRfid);
@@ -179,7 +196,7 @@ public class Application {
         LOG.info("In case of an RFID alarm, trigger:");
         final LightAndSoundStatus rfidLightAndSound = getLightAndSoundSelection(inputBuffer);
 
-        Settings settings = new Settings(enableRf, enableRfid, rfLightAndSound, rfidLightAndSound);
+        final Settings settings = new Settings(enableRf, enableRfid, rfLightAndSound, rfidLightAndSound);
         api.updateSettings(settings);
     }
 
@@ -283,12 +300,12 @@ public class Application {
         LOG.info("Please use ISO-8601 representation (e.g., 2015-02-26T12:28:20.670Z), leave empty for real-time events only");
         final String includeEventsSince = inputBuffer.readLine();
 
-        Subscribe subscribe = new Subscribe(reference, includeEventsSince, eventTypes);
+        final Subscribe subscribe = new Subscribe(reference, includeEventsSince, eventTypes);
         client.sendSubscription(subscribe);
     }
 
     private static Integer readInput(final BufferedReader inputBuffer, final Integer defaultValue) throws IOException {
-        String value = inputBuffer.readLine();
+        final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
             return defaultValue;
         }
@@ -296,7 +313,7 @@ public class Application {
     }
 
     private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue) throws IOException {
-        String value = inputBuffer.readLine();
+        final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
             return defaultValue;
         }

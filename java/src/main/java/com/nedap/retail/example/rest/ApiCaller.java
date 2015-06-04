@@ -1,25 +1,26 @@
 package com.nedap.retail.example.rest;
 
+import com.nedap.retail.renos.api.v2.rest.RestMessageParser;
+import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
+import com.nedap.retail.renos.api.v2.rest.message.Settings;
+import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
+import com.nedap.retail.renos.api.v2.rest.message.SystemStatus;
+import org.apache.commons.codec.binary.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import com.nedap.retail.renos.api.v2.rest.RestMessageParser;
-import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
-import com.nedap.retail.renos.api.v2.rest.message.Settings;
-import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
-import com.nedap.retail.renos.api.v2.rest.message.SystemStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Wraps REST calls to Renos API v2.
  */
 public class ApiCaller {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiCaller.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ApiCaller.class);
 
     private static final String POST = "POST";
     private static final String PUT = "PUT";
@@ -27,6 +28,9 @@ public class ApiCaller {
     private static final String GET = "GET";
 
     private final String baseUrl;
+
+    private String username = "";
+    private String password = "";
 
     public ApiCaller(final String baseUrl) {
         // make sure baseUrl does not end with a slash
@@ -66,12 +70,23 @@ public class ApiCaller {
         doHttpRequest("/api/v2/settings", PUT, json);
     }
 
-    private String doHttpRequest(String url, String requestMethod, String data) throws Exception {
-        LOGGER.debug("JSON {}", data);
+    public void setUsername(final String username) {
+        this.username = username;
+    }
+
+    public void setPassword(final String password) {
+        this.password = password;
+    }
+
+    private String doHttpRequest(final String url, final String requestMethod, final String data) throws Exception {
+        LOG.debug("JSON {}", data);
+
+        final String encodedAuthCredentials = Base64.encodeBase64String((username + ":" + password).getBytes());
         final URL device = new URL(this.baseUrl + url);
         final HttpURLConnection connection = (HttpURLConnection) device.openConnection();
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(10000);
+        connection.setRequestProperty("Authorization", "Basic " + encodedAuthCredentials);
 
         // at the moment we only need GET method for heartbeat, but the there will be functionality that requires POST
         switch (requestMethod) {
@@ -81,9 +96,9 @@ public class ApiCaller {
                 connection.addRequestProperty("Content-Type", "application/json");
                 connection.setRequestMethod(requestMethod);
                 connection.addRequestProperty("Content-Length", String.valueOf(data.length()));
-                OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-                out.write(data);
-                out.close();
+                try (OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream())) {
+                    out.write(data);
+                }
                 break;
             case DELETE:
                 break;
@@ -93,7 +108,7 @@ public class ApiCaller {
         }
 
         final int responseCode = connection.getResponseCode();
-        LOGGER.debug("Response code = {}", responseCode);
+        LOG.debug("Response code = {}", responseCode);
         if (responseCode < 400) {
             try (final BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 final StringBuilder result = new StringBuilder();
@@ -101,11 +116,11 @@ public class ApiCaller {
                 while ((line = inputBuffer.readLine()) != null) {
                     result.append(line);
                 }
-                LOGGER.debug("Result: {}", result.toString());
+                LOG.debug("Result: {}", result.toString());
                 return result.toString();
             }
         } else {
-            LOGGER.debug("Message: {}", connection.getResponseMessage());
+            LOG.debug("Message: {}", connection.getResponseMessage());
             return connection.getResponseMessage();
         }
     }

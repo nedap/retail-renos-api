@@ -14,6 +14,7 @@
         <jettyVersion>9.2.10.v20150310</jettyVersion>
         <slf4jVersion>1.7.7</slf4jVersion>
 		<jacksonVersion>2.4.3</jacksonVersion>
+        <commons-codec.version>1.9</commons-codec.version>
         <java.version>1.7</java.version>
     </properties>
 
@@ -42,6 +43,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4jVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>${commons-codec.version}</version>
         </dependency>
         <dependency>
             <groupId>com.nedap.retail.renos.api.v2</groupId>
