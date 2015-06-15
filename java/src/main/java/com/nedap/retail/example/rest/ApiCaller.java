@@ -110,7 +110,8 @@ public class ApiCaller {
         final int responseCode = connection.getResponseCode();
         LOG.debug("Response code = {}", responseCode);
         if (responseCode < 400) {
-            try (final BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            try (final BufferedReader inputBuffer = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream()))) {
                 final StringBuilder result = new StringBuilder();
                 String line;
                 while ((line = inputBuffer.readLine()) != null) {
@@ -119,6 +120,8 @@ public class ApiCaller {
                 LOG.debug("Result: {}", result.toString());
                 return result.toString();
             }
+        } else if (responseCode == 401) {
+            throw new UnauthorizedException("Unauthorized");
         } else {
             LOG.debug("Message: {}", connection.getResponseMessage());
             return connection.getResponseMessage();
