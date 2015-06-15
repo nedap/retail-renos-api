@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.nedap.retail.example.rest.UnauthorizedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +117,8 @@ public class Application {
                     printMenu();
                     break;
             }
+        } catch (final UnauthorizedException ex) {
+            LOG.info("Unauthorized access to Renos API. Please authenticate first before making any further requests.");
         } catch (final Exception e) {
             LOG.error("There was an error in communication with Renos: ", e);
         }
@@ -312,7 +315,8 @@ public class Application {
         return Integer.valueOf(value);
     }
 
-    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue) throws IOException {
+    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
+            throws IOException {
         final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
             return defaultValue;
