@@ -9,5 +9,5 @@ Java reference implementation and test tool.
 	mvn clean install
 
 ## To run the code
-	java -jar target/websocket-client-example-1.0-jar-with-dependencies.jar http://<unit ip address>:8080
+	java -jar target/websocket-client-example-1.0-jar-with-dependencies.jar http://<unit ip address>:8081
 
