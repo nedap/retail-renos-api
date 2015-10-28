@@ -168,6 +168,7 @@ public class Application {
         LOG.info("System id: {}", info.id);
         LOG.info("Firmware version: {}", info.version);
         LOG.info("System role: {}", info.systemRole);
+        LOG.info("System time: {}", info.systemTime);
     }
 
     private static void retrieveSystemStatus() throws Exception {
