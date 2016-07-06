@@ -1,5 +1,9 @@
 package com.nedap.retail.example;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7,13 +11,11 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.nedap.retail.example.rest.UnauthorizedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.nedap.retail.example.rest.ApiCaller;
+import com.nedap.retail.example.rest.UnauthorizedException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
 import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
+import com.nedap.retail.renos.api.v2.rest.message.LedColor;
 import com.nedap.retail.renos.api.v2.rest.message.Settings;
 import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
 import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
@@ -236,6 +238,20 @@ public class Application {
         final Integer offTime = readInput(inputBuffer, 50);
         LOG.info("Time the lamp is on afterwards (in milliseconds, default 7000): ");
         final Integer lightsHoldTime = readInput(inputBuffer, 7000);
+        LOG.info("LED red color value (default 255)");
+        final Integer redColor = readInput(inputBuffer, 255);
+        LOG.info("LED green color value (default 0)");
+        final Integer greenColor = readInput(inputBuffer, 0);
+        LOG.info("LED blue color value (default 0)");
+        final Integer blueColor = readInput(inputBuffer, 0);
+        LOG.info("Sound file name (default success)");
+        final String audioFileName = readString(inputBuffer, "success");
+        LOG.info("Sound period (in milliseconds, default 1000)");
+        final Integer soundPeriod = readInput(inputBuffer, 1000);
+        LOG.info("Number of times sound will be repeated (default 10)");
+        final Integer soundRepeats = readInput(inputBuffer, 10);
+        LOG.info("Sound volume (default 10)");
+        final Integer soundVolume = readInput(inputBuffer, 10);
 
         boolean sound = true;
         boolean light = true;
@@ -251,7 +267,8 @@ public class Application {
                 break;
         }
 
-        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound);
+        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound,
+                new LedColor(redColor, greenColor, blueColor), audioFileName, soundPeriod, soundRepeats, soundVolume);
         api.sendBlink(request);
     }
 
@@ -324,6 +341,11 @@ public class Application {
         }
 
         return "y".equalsIgnoreCase(value);
+    }
+
+    private static String readString(final BufferedReader inputBuffer, final String defaultValue) throws IOException {
+        final String value = inputBuffer.readLine();
+        return StringUtils.isEmpty(value) ? defaultValue : value;
     }
 
     private static void exit() {
