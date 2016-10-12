@@ -25,7 +25,7 @@ public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    private static final String ALL_SELECTED = "1,2,3,4,5,6";
+    private static final String ALL_SELECTED = "1,2,3,4,5,6,7";
 
     private static RenosWebSocketClient client;
     private static ApiCaller api;
@@ -263,6 +263,7 @@ public class Application {
         LOG.info("4. Metal alarm");
         LOG.info("5. RFID observation events");
         LOG.info("6. RFID move events");
+        LOG.info("7. Input events");
         LOG.info("Please choose all subscriptions separated by a comma, e.g., 1,3 (default: all)");
         String selection = inputBuffer.readLine();
         if (selection.isEmpty()) {
@@ -289,6 +290,9 @@ public class Application {
                     break;
                 case "6":
                     selectedEvents.add(EventType.RFID_MOVE);
+                    break;
+                case "7":
+                    selectedEvents.add(EventType.INPUT_OBSERVATION);
                     break;
                 default:
                     LOG.info("Unsupported option value {}", option);

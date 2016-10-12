@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
 import com.nedap.retail.renos.api.v2.ws.message.Epc;
 import com.nedap.retail.renos.api.v2.ws.message.Event;
+import com.nedap.retail.renos.api.v2.ws.message.InputObservationEvent;
 import com.nedap.retail.renos.api.v2.ws.message.Response;
 import com.nedap.retail.renos.api.v2.ws.message.RfidAlarmEvent;
 import com.nedap.retail.renos.api.v2.ws.message.RfidMoveEvent;
@@ -73,6 +74,10 @@ public class RenosApiListener implements WebSocketListener {
                 final RfidMoveEvent rfidMoveEvent = (RfidMoveEvent) event;
                 LOG.info("Received {} with id {} at {}, direction {} with EPCs:", event.type, event.id, event.time, event.direction);
                 printEpcs(rfidMoveEvent.epcs);
+                break;
+            case INPUT_OBSERVATION:
+                final InputObservationEvent inputEvent = (InputObservationEvent) event;
+                LOG.info("Received {}, id {}, detected by {} at {}", event.type, event.id, event.group, event.time);
                 break;
             default:
                 LOG.info("Unknown event type received {}", event.type);
