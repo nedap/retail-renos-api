@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
 import com.nedap.retail.renos.api.v2.ws.message.Epc;
 import com.nedap.retail.renos.api.v2.ws.message.Event;
+import com.nedap.retail.renos.api.v2.ws.message.InputObservationEvent;
 import com.nedap.retail.renos.api.v2.ws.message.Response;
 import com.nedap.retail.renos.api.v2.ws.message.RfidAlarmEvent;
 import com.nedap.retail.renos.api.v2.ws.message.RfidMoveEvent;
@@ -54,8 +55,8 @@ public class RenosApiListener implements WebSocketListener {
             case RF_ALARM:
             case IR_DIRECTION:
             case METAL_ALARM:
-                LOG.info("Received {}, id {}, detected by {} at {} {} ", event.type, event.id, event.group,
-                        event.time, event.direction == null ? "" : "with direction " + event.direction);
+                LOG.info("Received {}, id {}, detected by {} at {} {} ", event.type, event.id, event.group, event.time,
+                        event.direction == null ? "" : "with direction " + event.direction);
                 break;
             case RFID_ALARM: {
                 final String epc = ((RfidAlarmEvent) event).epc;
@@ -71,8 +72,14 @@ public class RenosApiListener implements WebSocketListener {
             }
             case RFID_MOVE:
                 final RfidMoveEvent rfidMoveEvent = (RfidMoveEvent) event;
-                LOG.info("Received {} with id {} at {}, direction {} with EPCs:", event.type, event.id, event.time, event.direction);
+                LOG.info("Received {} with id {} at {}, direction {} with EPCs:", event.type, event.id, event.time,
+                        event.direction);
                 printEpcs(rfidMoveEvent.epcs);
+                break;
+            case INPUT_OBSERVATION:
+                final InputObservationEvent inputEvent = (InputObservationEvent) event;
+                LOG.info("Received {}, id {}, detected by {} at {} with status: {}", event.type, event.id, event.group,
+                        event.time, inputEvent.status);
                 break;
             default:
                 LOG.info("Unknown event type received {}", event.type);
