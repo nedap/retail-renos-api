@@ -1,17 +1,7 @@
 package com.nedap.retail.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.nedap.retail.example.rest.UnauthorizedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.nedap.retail.example.rest.ApiCaller;
+import com.nedap.retail.example.rest.UnauthorizedException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
 import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
 import com.nedap.retail.renos.api.v2.rest.message.Settings;
@@ -20,12 +10,20 @@ import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
 import com.nedap.retail.renos.api.v2.rest.message.SystemStatus;
 import com.nedap.retail.renos.api.v2.ws.message.EventType;
 import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URISyntaxException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-
-    private static final String ALL_SELECTED = "1,2,3,4,5,6,7";
 
     private static RenosWebSocketClient client;
     private static ApiCaller api;
@@ -60,10 +58,10 @@ public class Application {
                 final char keycode = input.charAt(0);
                 handleCommand(inputBuffer, keycode);
             }
-            client.finish();
         } catch (final Exception e) {
             LOG.error("An error has occurred, system will exit", e);
-            exit();
+        } finally {
+            client.finish();
         }
     }
 
@@ -264,11 +262,31 @@ public class Application {
         LOG.info("5. RFID observation events");
         LOG.info("6. RFID move events");
         LOG.info("7. Input events");
+        LOG.info("8. SD label detect events");
         LOG.info("Please choose all subscriptions separated by a comma, e.g., 1,3 (default: all)");
-        String selection = inputBuffer.readLine();
+        final String selection = inputBuffer.readLine();
+        final EventType[] eventTypes;
         if (selection.isEmpty()) {
-            selection = ALL_SELECTED;
+            // all events
+            eventTypes = EventType.values();
+        } else {
+            eventTypes = parseEventTypes(selection);
         }
+
+        LOG.info("Please enter subscription reference (leave empty for no reference):");
+        final String reference = inputBuffer.readLine();
+
+        LOG.info("If you would like to include previous events, please enter date and time since when (max. 2h ago):");
+
+        LOG.info("Please use ISO-8601 representation (e.g. {}), leave empty for real-time events only",
+                Instant.now().toString());
+        final String includeEventsSince = inputBuffer.readLine();
+
+        final Subscribe subscribe = new Subscribe(reference, includeEventsSince, eventTypes);
+        client.sendSubscription(subscribe);
+    }
+
+    private static EventType[] parseEventTypes(final String selection) {
         final String[] parsedSelection = selection.split(",");
         final List<EventType> selectedEvents = new ArrayList<>();
         for (final String option : parsedSelection) {
@@ -294,22 +312,16 @@ public class Application {
                 case "7":
                     selectedEvents.add(EventType.INPUT_OBSERVATION);
                     break;
+                case "8":
+                    selectedEvents.add(EventType.SD_LABEL_DETECT);
+                    break;
                 default:
                     LOG.info("Unsupported option value {}", option);
             }
         }
         final EventType[] eventTypes = new EventType[selectedEvents.size()];
         selectedEvents.toArray(eventTypes);
-
-        LOG.info("Please enter subscription reference (leave empty for no reference):");
-        final String reference = inputBuffer.readLine();
-
-        LOG.info("If you would like to include previous events, please enter date and time since when (max. 2h ago):");
-        LOG.info("Please use ISO-8601 representation (e.g., 2015-02-26T12:28:20.670Z), leave empty for real-time events only");
-        final String includeEventsSince = inputBuffer.readLine();
-
-        final Subscribe subscribe = new Subscribe(reference, includeEventsSince, eventTypes);
-        client.sendSubscription(subscribe);
+        return eventTypes;
     }
 
     private static Integer readInput(final BufferedReader inputBuffer, final Integer defaultValue) throws IOException {
@@ -328,11 +340,6 @@ public class Application {
         }
 
         return "y".equalsIgnoreCase(value);
-    }
-
-    private static void exit() {
-        client.finish();
-        System.exit(0);
     }
 
 }

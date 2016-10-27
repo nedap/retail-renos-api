@@ -1,9 +1,5 @@
 package com.nedap.retail.example.websocket.client;
 
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
@@ -12,12 +8,16 @@ import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Common class for all WebSocket classes.
  */
 public abstract class ClientWebSocket {
-    
-    protected final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ClientWebSocket.class);
 
     protected Session session;
 

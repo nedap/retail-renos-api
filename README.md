@@ -11,25 +11,33 @@ Java reference implementation and test tool.
 ## To run the code
 	java -jar target/websocket-client-example-1.0-jar-with-dependencies.jar http://<unit ip address>
 
-# Api Updates
-	If the implementation of the api-v2 is changed at renos, it must be added to this reference implementation also
+# API dependency
+The example code depends on an API library `renos-api-message`. This API library is provided within the `java/repo` directory, which is a file-based maven repository.
 
-## Update the repo
-	cd ~/workspace/renos/retail-renos/api-v2-messages
-	nano pom.xml
-		add just before </project>
-		
-		    <distributionManagement>
-			<repository>
-			    <id>examplecode</id>
-			    <name>Example code repo</name>
-			    <url>file://${project.basedir}/../../retail-renos-api/java/repo</url>
-			</repository>
-		    </distributionManagement>
+## Include the library in your Maven project
+To include the API library in your project, make sure the dependency is available in some repository and reference the repository in your `pom.xml`:
 
-	mvn deploy
-	
-	and then rebuild the code as described before
+    <project>
+        <repositories>
+            <repository>
+                <id>project.local</id>
+                <name>project</name>
+                <url>file:${project.basedir}/repo</url>
+            </repository>
+        </repositories>
+    </project>
+
+Then add the dependency:
+
+    <project>
+        <dependencies>
+            <dependency>
+                <groupId>com.nedap.retail.renos.api.v2</groupId>
+                <artifactId>renos-api-message</artifactId>
+                <version>1.0</version>
+            </dependency>
+        </dependencies>
+    </project>
 
 
 
