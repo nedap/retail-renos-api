@@ -157,22 +157,19 @@
         }
 
         window.addEventListener('load', init, false);
-
-
     </script>
     <link rel="stylesheet" type="text/css" href="style.css" media="screen"/>
 </head>
 <body>
 <h2>Nedap Renos WebSocket API V2 Client</h2>
 <span>Please enter IP address on which Renos can be found:
-    <input id="websocketUrl" type="text"/><button id="initButton" style="width:50px"
-                                                  onclick="initWebSocket()">Init</button>
-  </span>
+    <input id="websocketUrl" type="text"/>
+    <button id="initButton" style="width:50px" onclick="initWebSocket()">Init</button>
+</span>
 <div style="width:400px">
     <fieldset>
         <legend>Heartbeat</legend>
         <button id="heartbeat" onclick="sendHeartbeat()">Send heartbeat</button>
-        </legend>
     </fieldset>
 </div>
 <div id="subscription" style="width:400px">
