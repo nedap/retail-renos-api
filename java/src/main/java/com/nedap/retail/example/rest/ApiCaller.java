@@ -1,19 +1,17 @@
 package com.nedap.retail.example.rest;
 
-import com.nedap.retail.renos.api.v2.rest.RestMessageParser;
-import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
-import com.nedap.retail.renos.api.v2.rest.message.Settings;
-import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
-import com.nedap.retail.renos.api.v2.rest.message.SystemStatus;
-import org.apache.commons.codec.binary.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
+import org.apache.commons.codec.binary.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.nedap.retail.renos.api.v2.rest.RestMessageParser;
+import com.nedap.retail.renos.api.v2.rest.message.*;
 
 /**
  * Wraps REST calls to Renos API v2.
@@ -48,6 +46,11 @@ public class ApiCaller {
     public SystemInfo retrieveSystemInfo() throws Exception {
         final String info = doHttpRequest("/api/v2/info", GET, null);
         return RestMessageParser.parse(info, SystemInfo.class);
+    }
+
+    public GroupInfo retrieveGroupInfo() throws Exception {
+        final String info = doHttpRequest("/api/v2/group_info", GET, null);
+        return RestMessageParser.parse(info, GroupInfo.class);
     }
 
     public SystemStatus retrieveSystemStatus() throws Exception {
@@ -127,5 +130,4 @@ public class ApiCaller {
             return connection.getResponseMessage();
         }
     }
-
 }

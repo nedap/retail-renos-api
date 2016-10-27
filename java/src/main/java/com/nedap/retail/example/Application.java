@@ -3,11 +3,8 @@ package com.nedap.retail.example;
 import com.nedap.retail.example.rest.ApiCaller;
 import com.nedap.retail.example.rest.UnauthorizedException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
-import com.nedap.retail.renos.api.v2.rest.message.BlinkRequest;
-import com.nedap.retail.renos.api.v2.rest.message.Settings;
+import com.nedap.retail.renos.api.v2.rest.message.*;
 import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
-import com.nedap.retail.renos.api.v2.rest.message.SystemInfo;
-import com.nedap.retail.renos.api.v2.rest.message.SystemStatus;
 import com.nedap.retail.renos.api.v2.ws.message.EventType;
 import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
 import org.slf4j.Logger;
@@ -20,6 +17,7 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Application {
 
@@ -72,6 +70,7 @@ public class Application {
         LOG.info("    a) authenticate against Renos");
         LOG.info("    h) send heartbeat to Renos");
         LOG.info("    i) get system information from Renos");
+        LOG.info("    g) get group information from Renos");
         LOG.info("    s) get system status from Renos");
         LOG.info("    t) get system settings from Renos");
         LOG.info("    u) update system settings");
@@ -94,6 +93,9 @@ public class Application {
                     break;
                 case 'i':
                     retrieveSystemInfo();
+                    break;
+                case 'g':
+                    retrieveGroupInfo();
                     break;
                 case 's':
                     retrieveSystemStatus();
@@ -167,6 +169,18 @@ public class Application {
         LOG.info("Firmware version: {}", info.version);
         LOG.info("System role: {}", info.systemRole);
         LOG.info("System time: {}", info.systemTime);
+    }
+
+    private static void retrieveGroupInfo() throws Exception {
+        final GroupInfo groupInfo = api.retrieveGroupInfo();
+        LOG.info("Group information");
+        for (final GroupInfo.Group group : groupInfo.groups) {
+            LOG.info("Group {}: '{}'", group.id, group.name);
+            for (final GroupInfo.Unit u : group.units) {
+                LOG.info("  Unit {}: '{}'", u.id, u.name);
+            }
+            LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+        }
     }
 
     private static void retrieveSystemStatus() throws Exception {
