@@ -1,13 +1,5 @@
 package com.nedap.retail.example.websocket.client;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
 import com.nedap.retail.renos.api.v2.ws.message.Heartbeat;
@@ -17,6 +9,13 @@ import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RenosWebSocketClient extends WebSocketClient {
 
@@ -25,7 +24,7 @@ public class RenosWebSocketClient extends WebSocketClient {
 
     private static final String WS_PROTOCOL_PREFIX = "ws://";
     private static final String EVENTS_SOCKET_SUFFIX = "/api/v2/events";
-    
+
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private final RenosApiSocket eventsSocket;
@@ -46,6 +45,7 @@ public class RenosWebSocketClient extends WebSocketClient {
 
     /**
      * Start the client, try to connect to Renos WebSocket server and wait until connection is established.
+     * 
      * @throws Exception
      */
     public void run() throws Exception {
@@ -56,7 +56,8 @@ public class RenosWebSocketClient extends WebSocketClient {
         LOG.info("Client started.");
     }
 
-    private void connectToSocket(final String url, final ClientWebSocket socket) throws URISyntaxException, IOException, InterruptedException {
+    private void connectToSocket(final String url, final ClientWebSocket socket)
+            throws URISyntaxException, IOException, InterruptedException {
         final URI renosUri = new URI(url);
         LOG.info("Connecting to {}", renosUri);
         final ClientUpgradeRequest request = new ClientUpgradeRequest();
@@ -74,6 +75,7 @@ public class RenosWebSocketClient extends WebSocketClient {
     public void finish() {
         try {
             eventsSocket.close();
+            scheduler.shutdownNow();
             super.stop();
         } catch (final Exception e) {
             LOG.error("There was an error while trying to stop the web socket client", e);
