@@ -54,7 +54,12 @@ public class RenosApiListener implements WebSocketListener {
         if (event.units != null) {
             sb.append(" by unit(s) ").append(event.units);
         }
-        sb.append(" in group ").append(event.group);
+        if (event.aisle != null) {
+            sb.append(" in aisle ").append(event.aisle);
+        }
+        if (event.group != null) {
+            sb.append(" in group ").append(event.group);
+        }
         sb.append(" at ").append(event.time);
         if (event.direction != null) {
             sb.append(" with direction ").append(event.direction);
@@ -94,9 +99,24 @@ public class RenosApiListener implements WebSocketListener {
 
     private void printEpcs(final List<Epc> epcs) {
         for (final Epc epc : epcs) {
-            LOG.info("   {} at {} {} {}", epc.epc, epc.time,
-                    epc.easStatus != null ? "with status " + epc.easStatus : "",
-                    epc.group != null ? "by group " + epc.group : "");
+            final StringBuilder sb = new StringBuilder();
+            sb.append(epc.epc);
+            if (epc.easStatus != null) {
+                sb.append(" with EAS status ").append(epc.easStatus);
+            }
+            sb.append(" detected");
+            if (epc.units != null) {
+                sb.append(" by unit(s) ").append(epc.units);
+            }
+            if (epc.aisle != null) {
+                sb.append(" in aisle ").append(epc.aisle);
+            }
+            if (epc.group != null) {
+                sb.append(" in group ").append(epc.group);
+            }
+            sb.append(" at ").append(epc.time);
+
+            LOG.info("   {}", sb.toString());
         }
     }
 
