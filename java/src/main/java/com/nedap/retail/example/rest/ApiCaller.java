@@ -65,7 +65,6 @@ public class ApiCaller {
 
     public void sendBlink(final BlinkRequest request) throws Exception {
         final String json = RestMessageParser.toJson(request);
-        LOG.info("{}", request);
         doHttpRequest("/api/v2/blink", POST, json);
     }
 
@@ -87,7 +86,6 @@ public class ApiCaller {
 
         final String encodedAuthCredentials = Base64.encodeBase64String((username + ":" + password).getBytes());
         final URL device = new URL(this.baseUrl + url);
-        LOG.info("baseURL: {}", baseUrl);
         final HttpURLConnection connection = (HttpURLConnection) device.openConnection();
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(10000);

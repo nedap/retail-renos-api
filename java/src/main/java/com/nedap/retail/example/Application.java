@@ -294,7 +294,6 @@ public class Application {
         final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound,
                 rgbValue, audioFileName, soundPeriod, soundRepeats, soundVolume);
         api.sendBlink(request);
-        LOG.info("send blinkrequest");
     }
 
     private static void subscribeToEvents(final BufferedReader inputBuffer) throws IOException {
@@ -376,7 +375,7 @@ public class Application {
         return Integer.valueOf(value);
     }
 
-    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
+    private static boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
             throws IOException {
         final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
@@ -398,9 +397,9 @@ public class Application {
         }
         final String[] values = value.split(",");
 
-        int redValue = Integer.parseInt(values[0]);
-        int greenValue = Integer.parseInt(values[1]);
-        int blueValue = Integer.parseInt(values[2]);
+        final int redValue = Integer.parseInt(values[0]);
+        final int greenValue = Integer.parseInt(values[1]);
+        final int blueValue = Integer.parseInt(values[2]);
 
         return new LedColor(redValue, greenValue, blueValue);
     }
@@ -413,10 +412,11 @@ public class Application {
         } else {
             if ("y".equalsIgnoreCase(value)) {
                 return true;
+            } else if ("n".equalsIgnoreCase(value)) {
+                return false;
             } else {
-                if ("n".equalsIgnoreCase(value)) {
-                    return false;
-                } else return false;
+                LOG.info("You entered an unknown character. (Assumed system has no lumen hardware)");
+                return false;
             }
         }
     }
