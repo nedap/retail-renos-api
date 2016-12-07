@@ -1,15 +1,5 @@
 package com.nedap.retail.example;
 
-import com.nedap.retail.example.rest.ApiCaller;
-import com.nedap.retail.example.rest.UnauthorizedException;
-import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
-import com.nedap.retail.renos.api.v2.rest.message.*;
-import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
-import com.nedap.retail.renos.api.v2.ws.message.EventType;
-import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,9 +9,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.nedap.retail.example.rest.ApiCaller;
+import com.nedap.retail.example.rest.UnauthorizedException;
+import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
+import com.nedap.retail.renos.api.v2.rest.message.*;
+import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
+import com.nedap.retail.renos.api.v2.ws.message.EventType;
+import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
+
 public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+    private static final int LIGHT = 1;
+    private static final int SOUND = 2;
 
     private static RenosWebSocketClient client;
     private static ApiCaller api;
@@ -235,6 +239,14 @@ public class Application {
     }
 
     private static void sendBlinkRequest(final BufferedReader inputBuffer) throws Exception {
+        Integer soundPeriod = null;
+        Integer soundRepeats = null;
+        Integer soundVolume = null;
+        String audioFileName = null;
+        boolean sound = true;
+        boolean light = true;
+        LedColor rgbValue = null;
+
         LOG.info("Trigger pattern:");
         LOG.info("1 = light");
         LOG.info("2 = sound");
@@ -248,14 +260,30 @@ public class Application {
         final Integer offTime = readInput(inputBuffer, 50);
         LOG.info("Time the lamp is on afterwards (in milliseconds, default 7000): ");
         final Integer lightsHoldTime = readInput(inputBuffer, 7000);
+        LOG.info("Does this system contain !Sense Lumen hardware(Y/N)? (default N)");
+        final boolean hasLumen = checkLumen(inputBuffer, false);
+        if (hasLumen) {
+            if (blinkOptions != SOUND) {
+                LOG.info("Enter RGB value(0 - 255) with comma separated (default 255,0,0)");
+                rgbValue = readRGB(inputBuffer);
+            }
+            if (blinkOptions != LIGHT) {
+                LOG.info("Sound file name (default success)");
+                audioFileName = readString(inputBuffer, "success");
+                LOG.info("Sound period (in milliseconds, default 1000)");
+                soundPeriod = readInput(inputBuffer, 1000);
+                LOG.info("Number of times sound will be repeated (default 10)");
+                soundRepeats = readInput(inputBuffer, 10);
+                LOG.info("Sound volume (default 10)");
+                soundVolume = readInput(inputBuffer, 10);
+            }
+        }
 
-        boolean sound = true;
-        boolean light = true;
         switch (blinkOptions) {
-            case 1:
+            case LIGHT:
                 sound = false;
                 break;
-            case 2:
+            case SOUND:
                 light = false;
                 break;
             default:
@@ -263,7 +291,8 @@ public class Application {
                 break;
         }
 
-        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound);
+        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound,
+                rgbValue, audioFileName, soundPeriod, soundRepeats, soundVolume);
         api.sendBlink(request);
     }
 
@@ -346,7 +375,7 @@ public class Application {
         return Integer.valueOf(value);
     }
 
-    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
+    private static boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
             throws IOException {
         final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
@@ -355,5 +384,42 @@ public class Application {
 
         return "y".equalsIgnoreCase(value);
     }
+
+    private static String readString(final BufferedReader inputBuffer, final String defaultValue) throws IOException {
+        final String value = inputBuffer.readLine();
+        return StringUtils.isEmpty(value) ? defaultValue : value;
+    }
+
+    private static LedColor readRGB(final BufferedReader inputBuffer) throws IOException {
+        final String value = inputBuffer.readLine();
+        if (value.trim().isEmpty()) {
+            return new LedColor(255, 0, 0);
+        }
+        final String[] values = value.split(",");
+
+        final int redValue = Integer.parseInt(values[0]);
+        final int greenValue = Integer.parseInt(values[1]);
+        final int blueValue = Integer.parseInt(values[2]);
+
+        return new LedColor(redValue, greenValue, blueValue);
+    }
+
+    private static Boolean checkLumen(final BufferedReader inputBuffer, final boolean defaultValue)
+            throws IOException {
+        final String value = inputBuffer.readLine();
+        if (value.trim().isEmpty()) {
+            return defaultValue;
+        } else {
+            if ("y".equalsIgnoreCase(value)) {
+                return true;
+            } else if ("n".equalsIgnoreCase(value)) {
+                return false;
+            } else {
+                LOG.info("You entered an unknown character. (Assumed system has no lumen hardware)");
+                return false;
+            }
+        }
+    }
+
 
 }
