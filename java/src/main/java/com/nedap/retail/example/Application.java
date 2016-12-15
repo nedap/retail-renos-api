@@ -268,8 +268,8 @@ public class Application {
                 rgbValue = readRGB(inputBuffer);
             }
             if (blinkOptions != LIGHT) {
-                LOG.info("Sound file name (default success)");
-                audioFileName = readString(inputBuffer, "success");
+                LOG.info("Sound file name (default rf_eas.wav)");
+                audioFileName = readString(inputBuffer, "rf_eas.wav");
                 LOG.info("Sound period (in milliseconds, default 1000)");
                 soundPeriod = readInput(inputBuffer, 1000);
                 LOG.info("Number of times sound will be repeated (default 10)");
