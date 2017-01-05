@@ -375,7 +375,7 @@ public class Application {
         return Integer.valueOf(value);
     }
 
-    private static boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
+    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
             throws IOException {
         final String value = inputBuffer.readLine();
         if (value.trim().isEmpty()) {
