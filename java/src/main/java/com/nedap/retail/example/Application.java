@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -387,7 +386,7 @@ public class Application {
 
     private static String readString(final BufferedReader inputBuffer, final String defaultValue) throws IOException {
         final String value = inputBuffer.readLine();
-        return StringUtils.isEmpty(value) ? defaultValue : value;
+        return (value == null || "".equals(value)) ? defaultValue : value;
     }
 
     private static LedColor readRGB(final BufferedReader inputBuffer) throws IOException {
