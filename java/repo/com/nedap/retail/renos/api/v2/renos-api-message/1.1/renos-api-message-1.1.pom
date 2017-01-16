@@ -4,5 +4,6 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.nedap.retail.renos.api.v2</groupId>
   <artifactId>renos-api-message</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
 </project>
+
