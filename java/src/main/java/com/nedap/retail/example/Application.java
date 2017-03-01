@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.nedap.retail.example.rest.MessageParsingException;
+import com.nedap.retail.example.rest.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,6 +124,10 @@ public class Application {
             }
         } catch (final UnauthorizedException ex) {
             LOG.info("Unauthorized access to Renos API. Please authenticate first before making any further requests.");
+        } catch (final NotFoundException ex) {
+            LOG.info("Endpoint not found. Please make sure you are connected to a compatible device.");
+        } catch (final MessageParsingException ex) {
+            LOG.info("Parsing message failed. Please make sure you are connected to a compatible device.");
         } catch (final Exception e) {
             LOG.error("There was an error in communication with Renos: ", e);
         }
@@ -167,41 +173,67 @@ public class Application {
 
     private static void retrieveSystemInfo() throws Exception {
         final SystemInfo info = api.retrieveSystemInfo();
-        LOG.info("System info");
-        LOG.info("System id: {}", info.id);
-        LOG.info("Firmware version: {}", info.version);
-        LOG.info("System role: {}", info.systemRole);
-        LOG.info("System time: {}", info.systemTime);
+        if (info != null) {
+            LOG.info("System info");
+            LOG.info("System id: {}", info.id);
+            LOG.info("Firmware version: {}", info.version);
+            LOG.info("System role: {}", info.systemRole);
+            LOG.info("System time: {}", info.systemTime);
+        } else {
+            throw new MessageParsingException("System info could not be retrieved");
+        }
+    }
+
+    private static void retrieveGroupInfo(final GroupInfo.Group group) {
+        if (group != null) {
+            LOG.info("Group {}: '{}'", group.id, group.name);
+            if (group.units != null) {
+                for (final GroupInfo.Unit u : group.units) {
+                    LOG.info("  Unit {}: '{}'", u.id, u.name);
+                }
+            }
+            if (group.aisles != null) {
+                LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+            }
+        }
     }
 
     private static void retrieveGroupInfo() throws Exception {
         final GroupInfo groupInfo = api.retrieveGroupInfo();
-        LOG.info("Group information");
-        for (final GroupInfo.Group group : groupInfo.groups) {
-            LOG.info("Group {}: '{}'", group.id, group.name);
-            for (final GroupInfo.Unit u : group.units) {
-                LOG.info("  Unit {}: '{}'", u.id, u.name);
+        if (groupInfo != null && groupInfo.groups != null) {
+            LOG.info("Group information");
+            for (final GroupInfo.Group group : groupInfo.groups) {
+                retrieveGroupInfo(group);
             }
-            LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+        } else {
+            throw new MessageParsingException("Group info could not be retrieved");
         }
     }
 
     private static void retrieveSystemStatus() throws Exception {
         final SystemStatus status = api.retrieveSystemStatus();
-        LOG.info("System status");
-        LOG.info("Unreachable units: {}", status.unreachableUnits != 0);
-        LOG.info("Device management connection error: {}", status.deviceManagementConnectionError != 0);
-        LOG.info("Rfid reader errors: {}", status.rfidErrors != 0);
-        LOG.info("Blocked IR beam sensors: {}", status.blockedIrBeamSensors != 0);
+        if (status != null) {
+            LOG.info("System status");
+            LOG.info("Unreachable units: {}", status.unreachableUnits != 0);
+            LOG.info("Device management connection error: {}", status.deviceManagementConnectionError != 0);
+            LOG.info("Rfid reader errors: {}", status.rfidErrors != 0);
+            LOG.info("Blocked IR beam sensors: {}", status.blockedIrBeamSensors != 0);
+        } else {
+            throw new MessageParsingException("System status could not be retrieved");
+        }
     }
 
     private static void retrieveSystemSettings() throws Exception {
         final Settings settings = api.retrieveSystemSettings();
-        LOG.info("System settings");
-        LOG.info("RF enabled {}", settings.enableRf);
-        LOG.info("RFID enabled {}", settings.enableRfid);
-        LOG.info("RF alarm triggers {}", settings.lightSoundRf);
-        LOG.info("RFID alarm triggers {}", settings.lightSoundRfid);
+        if (settings != null) {
+            LOG.info("System settings");
+            LOG.info("RF enabled {}", settings.enableRf);
+            LOG.info("RFID enabled {}", settings.enableRfid);
+            LOG.info("RF alarm triggers {}", settings.lightSoundRf);
+            LOG.info("RFID alarm triggers {}", settings.lightSoundRfid);
+        } else {
+            throw new MessageParsingException("System settings could not be retrieved");
+        }
     }
 
     private static void updateSystemSettings(final BufferedReader inputBuffer) throws Exception {

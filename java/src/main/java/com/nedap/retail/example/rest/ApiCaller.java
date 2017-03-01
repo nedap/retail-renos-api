@@ -125,6 +125,8 @@ public class ApiCaller {
             }
         } else if (responseCode == 401) {
             throw new UnauthorizedException("Unauthorized");
+        } else if (responseCode == 404) {
+            throw new NotFoundException("End point not available");
         } else {
             LOG.debug("Message: {}", connection.getResponseMessage());
             return connection.getResponseMessage();
