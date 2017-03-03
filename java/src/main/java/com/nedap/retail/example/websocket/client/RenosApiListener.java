@@ -1,12 +1,15 @@
 package com.nedap.retail.example.websocket.client;
 
-import com.nedap.retail.example.rest.MessageParsingException;
-import com.nedap.retail.renos.api.v2.ws.MessageParser;
-import com.nedap.retail.renos.api.v2.ws.message.*;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import com.nedap.retail.example.rest.MessageParsingException;
+import com.nedap.retail.renos.api.v2.ws.MessageParser;
+import com.nedap.retail.renos.api.v2.ws.message.*;
 
 /**
  * Listener for messages received from Renos V2 API.
@@ -36,13 +39,27 @@ public class RenosApiListener implements WebSocketListener {
         }
     }
 
-    private void handleResponse(final String message) throws Exception {
-        final Response response = MessageParser.parseResponse(message);
-
-        if(response == null || response.response == null) {
-            throw new MessageParsingException("Response message could not be parsed.");
+    private static Response parseResponse(final String message) throws MessageParsingException {
+        try {
+            return Optional.ofNullable(MessageParser.parseResponse(message))
+                    .filter(response -> response.response != null)
+                    .orElseThrow(() -> new MessageParsingException("response"));
+        } catch (final IOException e) {
+            throw new MessageParsingException("response");
         }
+    }
 
+    private static Event parseEvent(final String message) throws MessageParsingException {
+        try {
+            return Optional.ofNullable(MessageParser.parseEvent(message)).filter(event -> event.type != null)
+                    .orElseThrow(() -> new MessageParsingException("event"));
+        } catch (final IOException e) {
+            throw new MessageParsingException("event");
+        }
+    }
+
+    private void handleResponse(final String message) throws MessageParsingException {
+        final Response response = parseResponse(message);
         switch (response.response) {
             case UNKNOWN:
                 LOG.error("There was an error with the sent request: {}", response.content.message);
@@ -52,13 +69,8 @@ public class RenosApiListener implements WebSocketListener {
         }
     }
 
-    private void handleEvent(final String message) throws Exception {
-        final Event event = MessageParser.parseEvent(message);
-
-        if(event == null || event.type == null) {
-            throw new MessageParsingException("Event message could not be parsed.");
-        }
-
+    private void handleEvent(final String message) throws MessageParsingException {
+        final Event event = parseEvent(message);
         final StringBuilder sb = new StringBuilder();
         sb.append("Received ").append(event.type).append(",");
         sb.append(" detected");
@@ -133,6 +145,6 @@ public class RenosApiListener implements WebSocketListener {
 
     @Override
     public void onConnectionError() {
-        client.reconnect();
+        this.client.reconnect();
     }
 }
