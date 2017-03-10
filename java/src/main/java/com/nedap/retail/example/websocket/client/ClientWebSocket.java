@@ -2,6 +2,7 @@ package com.nedap.retail.example.websocket.client;
 
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
+import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
@@ -47,7 +48,11 @@ public abstract class ClientWebSocket {
 
     @OnWebSocketError
     public void onError(final Throwable e) {
-        LOGGER.error("An error occurred while communicating via WebSocket", e);
+        if (e instanceof UpgradeException) {
+            LOGGER.info("Handshake failed. Please make sure to be connecting to a compatible device.");
+        } else {
+            LOGGER.error("An error occurred while communicating via WebSocket", e);
+        }
     }
 
     public void awaitConnect() throws InterruptedException {

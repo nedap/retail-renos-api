@@ -7,13 +7,17 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.example.rest.ApiCaller;
-import com.nedap.retail.example.rest.UnauthorizedException;
+import com.nedap.retail.example.rest.HttpRequestException;
+import com.nedap.retail.example.rest.MessageParsingException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
 import com.nedap.retail.renos.api.v2.rest.message.*;
 import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
@@ -35,10 +39,12 @@ public class Application {
             System.exit(0);
         }
 
-        api = new ApiCaller(args[0]);
+        final String baseUrl = trimTrailingSlash(args[0]);
+
+        api = new ApiCaller(baseUrl);
 
         LOG.info("Application starting...");
-        client = new RenosWebSocketClient(args[0]);
+        client = new RenosWebSocketClient(baseUrl);
 
         try (BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(System.in))) {
             client.run();
@@ -56,14 +62,18 @@ public class Application {
                 }
 
                 // check what choice has been made
-                final char keycode = input.charAt(0);
-                handleCommand(inputBuffer, keycode);
+                handleCommand(inputBuffer, input.charAt(0));
             }
         } catch (final Exception e) {
             LOG.error("An error has occurred, system will exit", e);
         } finally {
             client.finish();
         }
+    }
+
+    private static String trimTrailingSlash(final String baseUrl) {
+        return Optional.of(baseUrl).filter(url -> !url.endsWith("/"))
+                .orElse(baseUrl.substring(0, baseUrl.length() - 1));
     }
 
     private static void printMenu() {
@@ -120,14 +130,14 @@ public class Application {
                     printMenu();
                     break;
             }
-        } catch (final UnauthorizedException ex) {
-            LOG.info("Unauthorized access to Renos API. Please authenticate first before making any further requests.");
+        } catch (final HttpRequestException | MessageParsingException e) {
+            LOG.info(e.getMessage());
         } catch (final Exception e) {
             LOG.error("There was an error in communication with Renos: ", e);
         }
     }
 
-    private static void handleBasicAuthentication(final BufferedReader inputBuffer) throws Exception {
+    private static void handleBasicAuthentication(final BufferedReader inputBuffer) throws IOException {
         LOG.info("Please supply credentials needed for authentication against Renos API.");
         LOG.info("Credentials are only needed if basic authentication is enabled for Renos.");
         LOG.info("If that's not the case, feel free to press Enter when asked for username and password");
@@ -140,7 +150,7 @@ public class Application {
         api.setPassword(password);
     }
 
-    private static void sendHeartbeat(final BufferedReader inputBuffer) throws Exception {
+    private static void sendHeartbeat(final BufferedReader inputBuffer) throws IOException {
         LOG.info("Please choose protocol to send heartbeat:");
         LOG.info("  1. REST");
         LOG.info("  2. WebSocket");
@@ -151,8 +161,7 @@ public class Application {
         }
 
         // check what choice has been made
-        final char keycode = input.charAt(0);
-        switch (keycode) {
+        switch (input.charAt(0)) {
             case '1':
                 api.heartbeat();
                 break;
@@ -165,7 +174,7 @@ public class Application {
         }
     }
 
-    private static void retrieveSystemInfo() throws Exception {
+    private static void retrieveSystemInfo() throws MessageParsingException, HttpRequestException {
         final SystemInfo info = api.retrieveSystemInfo();
         LOG.info("System info");
         LOG.info("System id: {}", info.id);
@@ -174,19 +183,29 @@ public class Application {
         LOG.info("System time: {}", info.systemTime);
     }
 
-    private static void retrieveGroupInfo() throws Exception {
-        final GroupInfo groupInfo = api.retrieveGroupInfo();
-        LOG.info("Group information");
-        for (final GroupInfo.Group group : groupInfo.groups) {
+    private static void logGroupInfo(final GroupInfo.Group group) {
+        if (group != null) {
             LOG.info("Group {}: '{}'", group.id, group.name);
-            for (final GroupInfo.Unit u : group.units) {
-                LOG.info("  Unit {}: '{}'", u.id, u.name);
+            if (group.units != null) {
+                for (final GroupInfo.Unit u : group.units) {
+                    LOG.info("  Unit {}: '{}'", u.id, u.name);
+                }
             }
-            LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+            if (group.aisles != null) {
+                LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+            }
         }
     }
 
-    private static void retrieveSystemStatus() throws Exception {
+    private static void retrieveGroupInfo() throws MessageParsingException, HttpRequestException {
+        final GroupInfo groupInfo = api.retrieveGroupInfo();
+        LOG.info("Group information");
+        for (final GroupInfo.Group group : groupInfo.groups) {
+            logGroupInfo(group);
+        }
+    }
+
+    private static void retrieveSystemStatus() throws MessageParsingException, HttpRequestException {
         final SystemStatus status = api.retrieveSystemStatus();
         LOG.info("System status");
         LOG.info("Unreachable units: {}", status.unreachableUnits != 0);
@@ -195,7 +214,7 @@ public class Application {
         LOG.info("Blocked IR beam sensors: {}", status.blockedIrBeamSensors != 0);
     }
 
-    private static void retrieveSystemSettings() throws Exception {
+    private static void retrieveSystemSettings() throws MessageParsingException, HttpRequestException {
         final Settings settings = api.retrieveSystemSettings();
         LOG.info("System settings");
         LOG.info("RF enabled {}", settings.enableRf);
@@ -204,12 +223,13 @@ public class Application {
         LOG.info("RFID alarm triggers {}", settings.lightSoundRfid);
     }
 
-    private static void updateSystemSettings(final BufferedReader inputBuffer) throws Exception {
+    private static void updateSystemSettings(final BufferedReader inputBuffer)
+            throws MessageParsingException, HttpRequestException {
         LOG.info("Update system settings:");
         LOG.info("Enable RF (y/n/empty for no change):");
-        final Boolean enableRf = readBoolean(inputBuffer, null);
+        final Boolean enableRf = readBoolean(inputBuffer);
         LOG.info("Enable RFID (y/n/empty for no change):");
-        final Boolean enableRfid = readBoolean(inputBuffer, null);
+        final Boolean enableRfid = readBoolean(inputBuffer);
         LOG.info("In case of an RF alarm, trigger:");
         final LightAndSoundStatus rfLightAndSound = getLightAndSoundSelection(inputBuffer);
         LOG.info("In case of an RFID alarm, trigger:");
@@ -219,25 +239,18 @@ public class Application {
         api.updateSettings(settings);
     }
 
-    private static LightAndSoundStatus getLightAndSoundSelection(final BufferedReader inputBuffer) throws IOException {
+    private static LightAndSoundStatus getLightAndSoundSelection(final BufferedReader inputBuffer)
+            throws MessageParsingException, HttpRequestException {
         LOG.info("1. Light and sound");
         LOG.info("2. Lights only");
         LOG.info("3. None");
         LOG.info("Empty for no change");
         final Integer rfLightAndSound = readInput(inputBuffer, 0);
-        switch (rfLightAndSound) {
-            case 1:
-                return LightAndSoundStatus.ON;
-            case 2:
-                return LightAndSoundStatus.LIGHTS_ONLY;
-            case 3:
-                return LightAndSoundStatus.OFF;
-            default:
-                return null;
-        }
+        return LightAndSoundStatus.values()[rfLightAndSound - 1];
     }
 
-    private static void sendBlinkRequest(final BufferedReader inputBuffer) throws Exception {
+    private static void sendBlinkRequest(final BufferedReader inputBuffer)
+            throws MessageParsingException, HttpRequestException {
         Integer soundPeriod = null;
         Integer soundRepeats = null;
         Integer soundVolume = null;
@@ -260,7 +273,7 @@ public class Application {
         LOG.info("Time the lamp is on afterwards (in milliseconds, default 7000): ");
         final Integer lightsHoldTime = readInput(inputBuffer, 7000);
         LOG.info("Does this system contain !Sense Lumen hardware(Y/N)? (default N)");
-        final boolean hasLumen = checkLumen(inputBuffer, false);
+        final boolean hasLumen = checkLumen(inputBuffer);
         if (hasLumen) {
             if (blinkOptions != SOUND) {
                 LOG.info("Enter RGB value(0 - 255) with comma separated (default 255,0,0)");
@@ -295,7 +308,8 @@ public class Application {
         api.sendBlink(request);
     }
 
-    private static void subscribeToEvents(final BufferedReader inputBuffer) throws IOException {
+    private static void subscribeToEvents(final BufferedReader inputBuffer)
+            throws MessageParsingException, HttpRequestException {
         LOG.info("Subscribe to: ");
         LOG.info("1. RF Alarm events");
         LOG.info("2. RFID Alarm events");
@@ -306,7 +320,7 @@ public class Application {
         LOG.info("7. Input events");
         LOG.info("8. SD label detect events");
         LOG.info("Please choose all subscriptions separated by a comma, e.g., 1,3 (default: all)");
-        final String selection = inputBuffer.readLine();
+        final String selection = readString(inputBuffer, "all");
         final EventType[] eventTypes;
         if (selection.isEmpty()) {
             // all events
@@ -316,22 +330,21 @@ public class Application {
         }
 
         LOG.info("Please enter subscription reference (leave empty for no reference):");
-        final String reference = inputBuffer.readLine();
+        final String reference = readString(inputBuffer, "");
 
         LOG.info("If you would like to include previous events, please enter date and time since when (max. 2h ago):");
 
         LOG.info("Please use ISO-8601 representation (e.g. {}), leave empty for real-time events only",
                 Instant.now().toString());
-        final String includeEventsSince = inputBuffer.readLine();
+        final String includeEventsSince = readString(inputBuffer, "");
 
         final Subscribe subscribe = new Subscribe(reference, includeEventsSince, eventTypes);
         client.sendSubscription(subscribe);
     }
 
     private static EventType[] parseEventTypes(final String selection) {
-        final String[] parsedSelection = selection.split(",");
         final List<EventType> selectedEvents = new ArrayList<>();
-        for (final String option : parsedSelection) {
+        for (final String option : selection.split(",")) {
             switch (option) {
                 case "1":
                     selectedEvents.add(EventType.RF_ALARM);
@@ -361,54 +374,50 @@ public class Application {
                     LOG.info("Unsupported option value {}", option);
             }
         }
-        final EventType[] eventTypes = new EventType[selectedEvents.size()];
-        selectedEvents.toArray(eventTypes);
-        return eventTypes;
+        return selectedEvents.toArray(new EventType[selectedEvents.size()]);
     }
 
-    private static Integer readInput(final BufferedReader inputBuffer, final Integer defaultValue) throws IOException {
-        final String value = inputBuffer.readLine();
-        if (value.trim().isEmpty()) {
-            return defaultValue;
+    private static <T> T readAndRethrow(final BufferedReader inputBuffer, final Function<String, T> function,
+            final T defaultValue) throws MessageParsingException {
+        try {
+            final String value = inputBuffer.readLine();
+            if (value.trim().isEmpty()) {
+                return defaultValue;
+            }
+            return function.apply(value);
+        } catch (final IOException | IllegalArgumentException e) {
+            throw new MessageParsingException("User input could not be parsed!");
         }
-        return Integer.valueOf(value);
     }
 
-    private static Boolean readBoolean(final BufferedReader inputBuffer, final Boolean defaultValue)
-            throws IOException {
-        final String value = inputBuffer.readLine();
-        if (value.trim().isEmpty()) {
-            return defaultValue;
-        }
-
-        return "y".equalsIgnoreCase(value);
+    private static Integer readInput(final BufferedReader inputBuffer, final Integer defaultValue)
+            throws MessageParsingException {
+        return readAndRethrow(inputBuffer, Integer::valueOf, defaultValue);
     }
 
-    private static String readString(final BufferedReader inputBuffer, final String defaultValue) throws IOException {
-        final String value = inputBuffer.readLine();
-        return (value == null || "".equals(value)) ? defaultValue : value;
+    private static Boolean readBoolean(final BufferedReader inputBuffer) throws MessageParsingException {
+        return readAndRethrow(inputBuffer, "y"::equalsIgnoreCase, null);
     }
 
-    private static LedColor readRGB(final BufferedReader inputBuffer) throws IOException {
-        final String value = inputBuffer.readLine();
-        if (value.trim().isEmpty()) {
-            return new LedColor(255, 0, 0);
-        }
-        final String[] values = value.split(",");
-
-        final int redValue = Integer.parseInt(values[0]);
-        final int greenValue = Integer.parseInt(values[1]);
-        final int blueValue = Integer.parseInt(values[2]);
-
-        return new LedColor(redValue, greenValue, blueValue);
+    private static String readString(final BufferedReader inputBuffer, final String defaultValue)
+            throws MessageParsingException {
+        return readAndRethrow(inputBuffer, String::toString, defaultValue);
     }
 
-    private static Boolean checkLumen(final BufferedReader inputBuffer, final boolean defaultValue)
-            throws IOException {
-        final String value = inputBuffer.readLine();
-        if (value.trim().isEmpty()) {
-            return defaultValue;
-        } else {
+    private static LedColor readRGB(final BufferedReader inputBuffer) throws MessageParsingException {
+        return readAndRethrow(inputBuffer, value -> {
+            final String[] values = value.split(",");
+
+            final int redValue = Integer.parseInt(values[0]);
+            final int greenValue = Integer.parseInt(values[1]);
+            final int blueValue = Integer.parseInt(values[2]);
+
+            return new LedColor(redValue, greenValue, blueValue);
+        }, new LedColor(255, 0, 0));
+    }
+
+    private static Boolean checkLumen(final BufferedReader inputBuffer) throws MessageParsingException {
+        return readAndRethrow(inputBuffer, value -> {
             if ("y".equalsIgnoreCase(value)) {
                 return true;
             } else if ("n".equalsIgnoreCase(value)) {
@@ -417,8 +426,6 @@ public class Application {
                 LOG.info("You entered an unknown character. (Assumed system has no lumen hardware)");
                 return false;
             }
-        }
+        }, false);
     }
-
-
 }

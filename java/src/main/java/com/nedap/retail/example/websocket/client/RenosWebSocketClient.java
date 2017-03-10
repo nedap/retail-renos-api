@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class RenosWebSocketClient extends WebSocketClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(RenosWebSocketClient.class);
-    public static final int RECONNECT_DELAY = 5;
+    private static final int RECONNECT_DELAY = 5;
 
     private static final String WS_PROTOCOL_PREFIX = "ws://";
     private static final String EVENTS_SOCKET_SUFFIX = "/api/v2/events";
@@ -33,6 +33,10 @@ public class RenosWebSocketClient extends WebSocketClient {
     private final String eventsSocketUrl;
 
     public RenosWebSocketClient(final String socketUrl) {
+        if (socketUrl.endsWith("/")) {
+            throw new IllegalArgumentException("The given URL should not have a trailing \"/\".");
+        }
+
         eventsSocket = new RenosApiSocket();
 
         // subscribe to WebSocket events from Renos WebSocket API
@@ -84,26 +88,24 @@ public class RenosWebSocketClient extends WebSocketClient {
 
     public void reconnect() {
         LOG.info("Trying to reconnect to Renos WebSocket, wait {}s", RECONNECT_DELAY);
-        reconnectFuture = scheduler.schedule(new ReconnectTask(), RECONNECT_DELAY, TimeUnit.SECONDS);
+        reconnectFuture = scheduler.schedule(() -> {
+            try {
+                connectToSocket(eventsSocketUrl, eventsSocket);
+            } catch (final URISyntaxException | IOException | InterruptedException e) {
+                LOG.error("Could not reconnect to {}, reason {}", eventsSocketUrl, e.getMessage());
+            }
+        }, RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 
     public void heartbeat() throws JsonProcessingException {
         eventsSocket.sendMessage(MessageParser.toJson(new Heartbeat()));
     }
 
-    public void sendSubscription(final Subscribe subscribe) throws JsonProcessingException {
-        eventsSocket.sendMessage(MessageParser.toJson(subscribe));
-    }
-
-    private class ReconnectTask implements Runnable {
-
-        @Override
-        public void run() {
-            try {
-                connectToSocket(eventsSocketUrl, eventsSocket);
-            } catch (final URISyntaxException | IOException | InterruptedException e) {
-                LOG.error("Could not reconnect to {}, reason {}", eventsSocketUrl, e.getMessage());
-            }
+    public void sendSubscription(final Subscribe subscribe) {
+        try {
+            eventsSocket.sendMessage(MessageParser.toJson(subscribe));
+        } catch (final JsonProcessingException e) {
+            throw new IllegalArgumentException("Serializing to JSON failed.", e);
         }
     }
 }

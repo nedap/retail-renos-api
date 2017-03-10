@@ -41,7 +41,11 @@
         }
 
         function onClose(event, url) {
-            writeToScreen("Disconnected from Renos API WebSocket server " + url);
+            if(event.code) {
+                writeError("Something went wrong. Response code: " + event.code);
+            } else {
+                writeToScreen("Disconnected from Renos API WebSocket server " + url);
+            }
             reconnect();
         }
 
