@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.nedap.retail.example.rest.InputParsingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,7 +131,7 @@ public class Application {
                     printMenu();
                     break;
             }
-        } catch (final HttpRequestException | MessageParsingException e) {
+        } catch (final HttpRequestException | MessageParsingException | InputParsingException e) {
             LOG.info(e.getMessage());
         } catch (final Exception e) {
             LOG.error("There was an error in communication with Renos: ", e);
@@ -224,7 +225,7 @@ public class Application {
     }
 
     private static void updateSystemSettings(final BufferedReader inputBuffer)
-            throws MessageParsingException, HttpRequestException {
+            throws InputParsingException, HttpRequestException {
         LOG.info("Update system settings:");
         LOG.info("Enable RF (y/n/empty for no change):");
         final Boolean enableRf = readBoolean(inputBuffer);
@@ -240,17 +241,21 @@ public class Application {
     }
 
     private static LightAndSoundStatus getLightAndSoundSelection(final BufferedReader inputBuffer)
-            throws MessageParsingException, HttpRequestException {
+            throws InputParsingException, HttpRequestException {
         LOG.info("1. Light and sound");
         LOG.info("2. Lights only");
         LOG.info("3. None");
         LOG.info("Empty for no change");
-        final Integer rfLightAndSound = readInput(inputBuffer, 0);
-        return LightAndSoundStatus.values()[rfLightAndSound - 1];
+
+        return Optional.ofNullable(readInput(inputBuffer, null))
+                .filter(option -> option < 4)
+                .filter(option -> option > 0)
+                .map(option -> LightAndSoundStatus.values()[option - 1])
+                .orElse(null);
     }
 
     private static void sendBlinkRequest(final BufferedReader inputBuffer)
-            throws MessageParsingException, HttpRequestException {
+            throws InputParsingException, HttpRequestException {
         Integer soundPeriod = null;
         Integer soundRepeats = null;
         Integer soundVolume = null;
@@ -309,7 +314,7 @@ public class Application {
     }
 
     private static void subscribeToEvents(final BufferedReader inputBuffer)
-            throws MessageParsingException, HttpRequestException {
+            throws InputParsingException, HttpRequestException {
         LOG.info("Subscribe to: ");
         LOG.info("1. RF Alarm events");
         LOG.info("2. RFID Alarm events");
@@ -342,7 +347,7 @@ public class Application {
         client.sendSubscription(subscribe);
     }
 
-    private static EventType[] parseEventTypes(final String selection) {
+    private static EventType[] parseEventTypes(final String selection) throws InputParsingException {
         final List<EventType> selectedEvents = new ArrayList<>();
         for (final String option : selection.split(",")) {
             switch (option) {
@@ -371,14 +376,14 @@ public class Application {
                     selectedEvents.add(EventType.SD_LABEL_DETECT);
                     break;
                 default:
-                    LOG.info("Unsupported option value {}", option);
+                    throw new InputParsingException("Unsupported option value " + option);
             }
         }
         return selectedEvents.toArray(new EventType[selectedEvents.size()]);
     }
 
     private static <T> T readAndRethrow(final BufferedReader inputBuffer, final Function<String, T> function,
-            final T defaultValue) throws MessageParsingException {
+            final T defaultValue) throws InputParsingException {
         try {
             final String value = inputBuffer.readLine();
             if (value.trim().isEmpty()) {
@@ -386,25 +391,25 @@ public class Application {
             }
             return function.apply(value);
         } catch (final IOException | IllegalArgumentException e) {
-            throw new MessageParsingException("User input could not be parsed!");
+            throw new InputParsingException("That is not a valid input!");
         }
     }
 
     private static Integer readInput(final BufferedReader inputBuffer, final Integer defaultValue)
-            throws MessageParsingException {
+            throws InputParsingException {
         return readAndRethrow(inputBuffer, Integer::valueOf, defaultValue);
     }
 
-    private static Boolean readBoolean(final BufferedReader inputBuffer) throws MessageParsingException {
+    private static Boolean readBoolean(final BufferedReader inputBuffer) throws InputParsingException {
         return readAndRethrow(inputBuffer, "y"::equalsIgnoreCase, null);
     }
 
     private static String readString(final BufferedReader inputBuffer, final String defaultValue)
-            throws MessageParsingException {
+            throws InputParsingException {
         return readAndRethrow(inputBuffer, String::toString, defaultValue);
     }
 
-    private static LedColor readRGB(final BufferedReader inputBuffer) throws MessageParsingException {
+    private static LedColor readRGB(final BufferedReader inputBuffer) throws InputParsingException {
         return readAndRethrow(inputBuffer, value -> {
             final String[] values = value.split(",");
 
@@ -416,7 +421,7 @@ public class Application {
         }, new LedColor(255, 0, 0));
     }
 
-    private static Boolean checkLumen(final BufferedReader inputBuffer) throws MessageParsingException {
+    private static Boolean checkLumen(final BufferedReader inputBuffer) throws InputParsingException {
         return readAndRethrow(inputBuffer, value -> {
             if ("y".equalsIgnoreCase(value)) {
                 return true;
