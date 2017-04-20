@@ -347,7 +347,7 @@ public class Application {
         client.sendSubscription(subscribe);
     }
 
-    private static EventType[] parseEventTypes(final String selection) {
+    private static EventType[] parseEventTypes(final String selection) throws InputParsingException {
         final List<EventType> selectedEvents = new ArrayList<>();
         for (final String option : selection.split(",")) {
             switch (option) {
@@ -376,7 +376,7 @@ public class Application {
                     selectedEvents.add(EventType.SD_LABEL_DETECT);
                     break;
                 default:
-                    LOG.info("Unsupported option value {}", option);
+                    throw new InputParsingException("Unsupported option value " + option);
             }
         }
         return selectedEvents.toArray(new EventType[selectedEvents.size()]);
