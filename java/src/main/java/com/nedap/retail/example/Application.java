@@ -11,13 +11,12 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.nedap.retail.example.rest.InputParsingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.example.rest.ApiCaller;
 import com.nedap.retail.example.rest.HttpRequestException;
+import com.nedap.retail.example.rest.InputParsingException;
 import com.nedap.retail.example.rest.MessageParsingException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
 import com.nedap.retail.renos.api.v2.rest.message.*;
@@ -247,11 +246,17 @@ public class Application {
         LOG.info("3. None");
         LOG.info("Empty for no change");
 
-        return Optional.ofNullable(readInput(inputBuffer, null))
-                .filter(option -> option < 4)
-                .filter(option -> option > 0)
-                .map(option -> LightAndSoundStatus.values()[option - 1])
-                .orElse(null);
+        final Integer rfLightAndSound = readInput(inputBuffer, 0);
+        switch (rfLightAndSound) {
+            case 1:
+                return LightAndSoundStatus.ON;
+            case 2:
+                return LightAndSoundStatus.LIGHTS_ONLY;
+            case 3:
+                return LightAndSoundStatus.OFF;
+            default:
+                return null;
+        }
     }
 
     private static void sendBlinkRequest(final BufferedReader inputBuffer)
@@ -308,8 +313,8 @@ public class Application {
                 break;
         }
 
-        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound,
-                rgbValue, audioFileName, soundPeriod, soundRepeats, soundVolume);
+        final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound, rgbValue,
+                audioFileName, soundPeriod, soundRepeats, soundVolume);
         api.sendBlink(request);
     }
 
