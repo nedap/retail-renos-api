@@ -380,6 +380,8 @@ public class Application {
                 case "8":
                     selectedEvents.add(EventType.SD_LABEL_DETECT);
                     break;
+                case "all":
+                    return EventType.values();
                 default:
                     throw new InputParsingException("Unsupported option value " + option);
             }
