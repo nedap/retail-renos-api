@@ -355,7 +355,7 @@ public class Application {
     private static EventType[] parseEventTypes(final String selection) throws InputParsingException {
         final List<EventType> selectedEvents = new ArrayList<>();
         for (final String option : selection.split(",")) {
-            switch (option) {
+            switch (option.trim()) {
                 case "1":
                     selectedEvents.add(EventType.RF_ALARM);
                     break;
