@@ -355,7 +355,7 @@ public class Application {
     private static EventType[] parseEventTypes(final String selection) throws InputParsingException {
         final List<EventType> selectedEvents = new ArrayList<>();
         for (final String option : selection.split(",")) {
-            switch (option) {
+            switch (option.trim()) {
                 case "1":
                     selectedEvents.add(EventType.RF_ALARM);
                     break;
@@ -380,6 +380,8 @@ public class Application {
                 case "8":
                     selectedEvents.add(EventType.SD_LABEL_DETECT);
                     break;
+                case "all":
+                    return EventType.values();
                 default:
                     throw new InputParsingException("Unsupported option value " + option);
             }
