@@ -11,7 +11,7 @@
     <name>Renos Web Socket client</name>
 
     <properties>
-        <jettyVersion>9.2.10.v20150310</jettyVersion>
+        <jettyVersion>9.4.12.v20180830</jettyVersion>
         <slf4jVersion>1.7.7</slf4jVersion>
         <jacksonVersion>2.9.7</jacksonVersion>
         <commons-codec.version>1.9</commons-codec.version>
