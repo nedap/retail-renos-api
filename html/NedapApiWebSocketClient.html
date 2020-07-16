@@ -15,12 +15,26 @@
 
             if ('WebSocket' in window) {
                 document.getElementById('initButton').disabled = false;
+                document.getElementById('closeButton').disabled = true;
                 document.getElementById('subscribe').disabled = true;
                 document.getElementById('heartbeat').disabled = true;
             } else {
                 writeError('Your browser does not support WebSocket. Please upgrade to the newer version.');
                 document.getElementById('initButton').disabled = true;
             }
+        }
+
+        function authorize() {
+          if ( document.getElementById("token").value ) {
+            writeToScreen("Start authentication.")
+            var authenticate = new Object();
+            authenticate.request = 'authenticate'
+            authenticate.token = document.getElementById("token").value;
+            var requestJson = JSON.stringify(authenticate)
+            eventsWebSocket.send(requestJson)
+          } else {
+            writeToScreen("Please add an token.")
+          }
         }
 
         function initWebSocket() {
@@ -34,19 +48,35 @@
             eventsWebSocket.onerror = function(event) { onError(event) };
         }
 
+        function closeWebSocket() {
+          eventsWebSocket.close();
+        }
+
         function onOpen(event, url) {
+            writeToScreen("Connected to Renos API WebSocket server " + url);
+            authorize()
+            document.getElementById('initButton').disabled = true;
+            document.getElementById('closeButton').disabled = false;
             document.getElementById('subscribe').disabled = false;
             document.getElementById('heartbeat').disabled = false;
-            writeToScreen("Connected to Renos API WebSocket server " + url);
         }
 
         function onClose(event, url) {
+            document.getElementById('initButton').disabled = false;
+          document.getElementById('closeButton').disabled = true;
+          document.getElementById('subscribe').disabled = true;
+          document.getElementById('heartbeat').disabled = true;
+
+          if (document.getElementById('autoReconnect').checked) {
             if(event.code) {
                 writeError("Something went wrong. Response code: " + event.code);
             } else {
                 writeToScreen("Disconnected from Renos API WebSocket server " + url);
             }
+                      if (document.getElementById('autoReconnect').checked) {
+
             reconnect();
+          }
         }
 
         function onMessage(event) {
@@ -166,9 +196,12 @@
 </head>
 <body>
 <h2>Nedap Renos WebSocket API V2 Client</h2>
-<span>Please enter IP address on which Renos can be found:
-    <input id="websocketUrl" type="text"/>
-    <button id="initButton" style="width:50px" onclick="initWebSocket()">Init</button>
+<span>
+    Please enter IP address on which Renos can be found: <input id="websocketUrl" type="text"/> 
+    Token: <input type="text" id="token" style="width:150px"/>
+    <button id="initButton" style="width:50px" onclick="initWebSocket()" >Init</button>
+    <button id="closeButton" style="width:50px" onclick="closeWebSocket()" >Close</button><br><br>
+    Automaticly reconnect: <input type="checkbox" id="autoReconnect" value="reconnect"/><br><br>
 </span>
 <div style="width:400px">
     <fieldset>
