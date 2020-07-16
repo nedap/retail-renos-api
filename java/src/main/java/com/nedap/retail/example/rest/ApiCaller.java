@@ -30,8 +30,8 @@ public class ApiCaller {
 
     private final String baseUrl;
 
-    private String username = "";
-    private String password = "";
+    private String token = "";
+
 
     public ApiCaller(final String baseUrl) {
         // make sure baseUrl does not end with a slash
@@ -53,11 +53,7 @@ public class ApiCaller {
     }
 
     private <T extends RestObject> String serializeAndRethrow(final T object) {
-        try {
-            return RestMessageParser.toJson(object);
-        } catch (final JsonProcessingException e) {
-            throw new IllegalArgumentException("Serializing to JSON failed.", e);
-        }
+        return RestMessageParser.toJson(object);
     }
 
     public void heartbeat() throws HttpRequestException {
@@ -88,27 +84,22 @@ public class ApiCaller {
         doHttpRequest("/api/v2/settings", PUT, serializeAndRethrow(settings));
     }
 
-    public void setUsername(final String username) {
-        this.username = username;
-    }
-
-    public void setPassword(final String password) {
-        this.password = password;
+    public void setToken(final String token) {
+        this.token = token;
     }
 
     private String doHttpRequest(final String url, final String requestMethod, final String data)
             throws HttpRequestException {
         LOG.debug("JSON {}", data);
 
-        final String encodedAuthCredentials = Base64
-                .encodeBase64String((this.username + ":" + this.password).getBytes());
         try {
             final URL device = new URL(this.baseUrl + url);
             final HttpURLConnection connection = (HttpURLConnection) device.openConnection();
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
-            connection.setRequestProperty("Authorization", "Basic " + encodedAuthCredentials);
-
+            if (!token.isEmpty()) {
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+            }
             // at the moment we only need GET method for heartbeat, but the there will be functionality that requires
             // POST
             switch (requestMethod) {
@@ -142,9 +133,8 @@ public class ApiCaller {
                     LOG.debug("Result: {}", result.toString());
                     return result.toString();
                 }
-            } else if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                throw new UnauthorizedException("Unauthorized access to Renos API."
-                        + " Please authenticate first before making any further requests.");
+            } else if (responseCode == HttpURLConnection.HTTP_FORBIDDEN || responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
+                throw new UnauthorizedException("Unauthorized access to Renos API.");
             } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
                 throw new NotFoundException(
                         "Endpoint not found." + " Please make sure you are connected to a compatible device.");

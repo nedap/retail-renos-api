@@ -3,6 +3,7 @@ package com.nedap.retail.example.websocket.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
 import com.nedap.retail.renos.api.v2.ws.message.Heartbeat;
+import com.nedap.retail.renos.api.v2.ws.message.Authenticate;
 import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
@@ -32,6 +33,8 @@ public class RenosWebSocketClient extends WebSocketClient {
 
     private final String eventsSocketUrl;
 
+    private String token;
+
     public RenosWebSocketClient(final String socketUrl) {
         if (socketUrl.endsWith("/")) {
             throw new IllegalArgumentException("The given URL should not have a trailing \"/\".");
@@ -45,6 +48,10 @@ public class RenosWebSocketClient extends WebSocketClient {
 
         this.eventsSocketUrl = WS_PROTOCOL_PREFIX + socketUrl.substring(7) + EVENTS_SOCKET_SUFFIX;
         LOG.info("Events socket URL {}", this.eventsSocketUrl);
+    }
+
+    public void setToken(final String token) {
+        this.token = token;
     }
 
     /**
@@ -69,16 +76,26 @@ public class RenosWebSocketClient extends WebSocketClient {
         this.connect(socket, renosUri, request);
         socket.awaitConnect();
         if (socket.isConnected()) {
-            if (reconnectFuture != null) {
-                reconnectFuture.cancel(true);
-                reconnectFuture = null;
-            }
+            cancelReconnect();
+            authenticateIfNeeded();
         }
+    }
+
+    private void authenticateIfNeeded(){
+        if (token != null && !token.isEmpty()) {
+            LOG.info("Sending autentication token: {}", token);
+            eventsSocket.sendMessage(MessageParser.toJson(new Authenticate(token)));
+        }
+    }
+
+    public void disconnect() {
+        LOG.info("Closing the connection");
+        eventsSocket.close();
     }
 
     public void finish() {
         try {
-            eventsSocket.close();
+            disconnect();
             scheduler.shutdownNow();
             super.stop();
         } catch (final Exception e) {
@@ -87,6 +104,7 @@ public class RenosWebSocketClient extends WebSocketClient {
     }
 
     public void reconnect() {
+        cancelReconnect();
         LOG.info("Trying to reconnect to Renos WebSocket, wait {}s", RECONNECT_DELAY);
         reconnectFuture = scheduler.schedule(() -> {
             try {
@@ -97,15 +115,18 @@ public class RenosWebSocketClient extends WebSocketClient {
         }, RECONNECT_DELAY, TimeUnit.SECONDS);
     }
 
+    private void cancelReconnect() {
+        if (reconnectFuture != null) {
+            reconnectFuture.cancel(false);
+            reconnectFuture = null;
+        }
+    }
+
     public void heartbeat() throws JsonProcessingException {
         eventsSocket.sendMessage(MessageParser.toJson(new Heartbeat()));
     }
 
     public void sendSubscription(final Subscribe subscribe) {
-        try {
-            eventsSocket.sendMessage(MessageParser.toJson(subscribe));
-        } catch (final JsonProcessingException e) {
-            throw new IllegalArgumentException("Serializing to JSON failed.", e);
-        }
+        eventsSocket.sendMessage(MessageParser.toJson(subscribe));
     }
 }

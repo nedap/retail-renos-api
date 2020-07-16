@@ -11,13 +11,10 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.nedap.retail.example.rest.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.nedap.retail.example.rest.ApiCaller;
-import com.nedap.retail.example.rest.HttpRequestException;
-import com.nedap.retail.example.rest.InputParsingException;
-import com.nedap.retail.example.rest.MessageParsingException;
 import com.nedap.retail.example.websocket.client.RenosWebSocketClient;
 import com.nedap.retail.renos.api.v2.rest.message.*;
 import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
@@ -32,21 +29,28 @@ public class Application {
 
     private static RenosWebSocketClient client;
     private static ApiCaller api;
+    private static String BASE_URL;
 
     public static void main(final String[] args) {
         if (args.length == 0) {
             LOG.info("Please use URL of device as parameter, for example: http://localhost:8081");
             System.exit(0);
+        } else {
+            BASE_URL = trimTrailingSlash(args[0]);
         }
 
         final String baseUrl = trimTrailingSlash(args[0]);
 
-        api = new ApiCaller(baseUrl);
+        api = new ApiCaller(BASE_URL);
 
         LOG.info("Application starting...");
-        client = new RenosWebSocketClient(baseUrl);
+        client = new RenosWebSocketClient(BASE_URL);
 
         try (BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(System.in))) {
+
+
+            addAuthentication(inputBuffer);
+
             client.run();
 
             String input;
@@ -80,7 +84,7 @@ public class Application {
         // print line
         LOG.info("------------------------------------------------------");
         LOG.info("Available commands:");
-        LOG.info("    a) authenticate against Renos");
+        LOG.info("    a) add authentication token");
         LOG.info("    h) send heartbeat to Renos");
         LOG.info("    i) get system information from Renos");
         LOG.info("    g) get group information from Renos");
@@ -88,6 +92,8 @@ public class Application {
         LOG.info("    t) get system settings from Renos");
         LOG.info("    u) update system settings");
         LOG.info("    b) send blink request to Renos");
+        LOG.info("    r) reconnect WS to Renos");
+        LOG.info("    d) disconnect WS to Renos");
         LOG.info("    e) subscribe to events from Renos");
         LOG.info("Please enter your choice and press Enter, or just Enter to exit.");
         // print line
@@ -99,7 +105,7 @@ public class Application {
         try {
             switch (keycode) {
                 case 'a':
-                    handleBasicAuthentication(inputBuffer);
+                    addAuthentication(inputBuffer);
                     break;
                 case 'h':
                     sendHeartbeat(inputBuffer);
@@ -122,6 +128,12 @@ public class Application {
                 case 'b':
                     sendBlinkRequest(inputBuffer);
                     break;
+                case 'r':
+                    reconnectWSToRenos();
+                    break;
+                case 'd':
+                    disconnectWSToRenos();
+                    break;
                 case 'e':
                     subscribeToEvents(inputBuffer);
                     break;
@@ -130,6 +142,8 @@ public class Application {
                     printMenu();
                     break;
             }
+        } catch (final UnauthorizedException e) {
+            LOG.info("Unauthorized access to Renos API. Please supply a valid toke in your requests.");
         } catch (final HttpRequestException | MessageParsingException | InputParsingException e) {
             LOG.info(e.getMessage());
         } catch (final Exception e) {
@@ -137,17 +151,15 @@ public class Application {
         }
     }
 
-    private static void handleBasicAuthentication(final BufferedReader inputBuffer) throws IOException {
-        LOG.info("Please supply credentials needed for authentication against Renos API.");
-        LOG.info("Credentials are only needed if basic authentication is enabled for Renos.");
-        LOG.info("If that's not the case, feel free to press Enter when asked for username and password");
+    private static void addAuthentication(final BufferedReader inputBuffer) throws Exception {
+        LOG.info("Please supply a token needed for authentication against Renos API.");
+        LOG.info("A token is only needed if authentication is enabled for Renos.");
+        LOG.info("Authentication is default enabled for firmware versions after 20.10.");
         LOG.info("");
-        LOG.info("Please enter username:");
-        final String username = inputBuffer.readLine();
-        LOG.info("Please enter password:");
-        final String password = inputBuffer.readLine();
-        api.setUsername(username);
-        api.setPassword(password);
+        LOG.info("Please enter token:");
+        final String token = readString(inputBuffer, "");
+        api.setToken(token);
+        client.setToken(token);
     }
 
     private static void sendHeartbeat(final BufferedReader inputBuffer) throws IOException {
@@ -177,22 +189,22 @@ public class Application {
     private static void retrieveSystemInfo() throws MessageParsingException, HttpRequestException {
         final SystemInfo info = api.retrieveSystemInfo();
         LOG.info("System info");
-        LOG.info("System id: {}", info.id);
-        LOG.info("Firmware version: {}", info.version);
-        LOG.info("System role: {}", info.systemRole);
-        LOG.info("System time: {}", info.systemTime);
+        LOG.info("System id: {}", info.getId());
+        LOG.info("Firmware version: {}", info.getVersion());
+        LOG.info("System role: {}", info.getSystemRole());
+        LOG.info("System time: {}", info.getSystemTime());
     }
 
     private static void logGroupInfo(final GroupInfo.Group group) {
         if (group != null) {
-            LOG.info("Group {}: '{}'", group.id, group.name);
-            if (group.units != null) {
-                for (final GroupInfo.Unit u : group.units) {
+            LOG.info("Group {}: '{}'", group.getId(), group.getName());
+            if (group.getUnits() != null) {
+                for (final GroupInfo.Unit u : group.getUnits()) {
                     LOG.info("  Unit {}: '{}'", u.id, u.name);
                 }
             }
-            if (group.aisles != null) {
-                LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+            if (group.getAisles() != null) {
+                LOG.info("  Aisles: {}", group.getAisles().stream().map((a) -> a.getId()).collect(Collectors.toList()));
             }
         }
     }
@@ -200,7 +212,7 @@ public class Application {
     private static void retrieveGroupInfo() throws MessageParsingException, HttpRequestException {
         final GroupInfo groupInfo = api.retrieveGroupInfo();
         LOG.info("Group information");
-        for (final GroupInfo.Group group : groupInfo.groups) {
+        for (final GroupInfo.Group group : groupInfo.getGroups()) {
             logGroupInfo(group);
         }
     }
@@ -208,19 +220,19 @@ public class Application {
     private static void retrieveSystemStatus() throws MessageParsingException, HttpRequestException {
         final SystemStatus status = api.retrieveSystemStatus();
         LOG.info("System status");
-        LOG.info("Unreachable units: {}", status.unreachableUnits != 0);
-        LOG.info("Device management connection error: {}", status.deviceManagementConnectionError != 0);
-        LOG.info("Rfid reader errors: {}", status.rfidErrors != 0);
-        LOG.info("Blocked IR beam sensors: {}", status.blockedIrBeamSensors != 0);
+        LOG.info("Unreachable units: {}", status.getUnreachableUnits() != 0);
+        LOG.info("Device management connection error: {}", status.getDeviceManagementConnectionError() != 0);
+        LOG.info("Rfid reader errors: {}", status.getRfidErrors() != 0);
+        LOG.info("Blocked IR beam sensors: {}", status.getBlockedIrBeamSensors() != 0);
     }
 
     private static void retrieveSystemSettings() throws MessageParsingException, HttpRequestException {
         final Settings settings = api.retrieveSystemSettings();
         LOG.info("System settings");
-        LOG.info("RF enabled {}", settings.enableRf);
-        LOG.info("RFID enabled {}", settings.enableRfid);
-        LOG.info("RF alarm triggers {}", settings.lightSoundRf);
-        LOG.info("RFID alarm triggers {}", settings.lightSoundRfid);
+        LOG.info("RF enabled {}", settings.getEnableRf());
+        LOG.info("RFID enabled {}", settings.getEnableRfid());
+        LOG.info("RF alarm triggers {}", settings.getLightSoundRf());
+        LOG.info("RFID alarm triggers {}", settings.getLightSoundRfid());
     }
 
     private static void updateSystemSettings(final BufferedReader inputBuffer)
@@ -316,6 +328,14 @@ public class Application {
         final BlinkRequest request = new BlinkRequest(onTime, offTime, count, lightsHoldTime, light, sound, rgbValue,
                 audioFileName, soundPeriod, soundRepeats, soundVolume);
         api.sendBlink(request);
+    }
+
+    private static void reconnectWSToRenos() {
+        client.reconnect();
+    }
+
+    private static void disconnectWSToRenos(){
+        client.disconnect();
     }
 
     private static void subscribeToEvents(final BufferedReader inputBuffer)

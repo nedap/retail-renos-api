@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>RhEAS</artifactId>
+        <groupId>com.nedap.retail</groupId>
+        <version>develop-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.nedap.retail.renos.api.v2</groupId>
+    <artifactId>renos-api-message</artifactId>
+    <version>1.2</version>
+    <!-- <version/> is not defined because we want to inherit the parent (Renos) version -->
+    <packaging>jar</packaging>
+
+    <name>Renos API v2 Message Parser</name>
+    <properties>
+        <java.version.supported>1.8</java.version.supported>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nedap.retail</groupId>
+            <artifactId>renos-json</artifactId>
+            <version>develop-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>${java.version.supported}</source>
+                        <target>${java.version.supported}</target>
+                        <encoding>UTF-8</encoding>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>libs-snapshots</name>
+            <url>http://${artifactory.server}:8081/artifactory/libs-snapshots-local</url>
+        </snapshotRepository>
+        <repository>
+            <id>releases</id>
+            <name>libs-releases</name>
+            <url>http://${artifactory.server}:8081/artifactory/libs-releases-local</url>
+        </repository>
+    </distributionManagement>
+</project>

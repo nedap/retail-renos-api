@@ -32,7 +32,7 @@ public abstract class ClientWebSocket {
 
     @OnWebSocketConnect
     public void onConnect(final Session session) {
-        LOGGER.info("Connected: {}", session.getRemoteAddress().getHostName());
+        LOGGER.info("WS Connected: {}", session.getRemoteAddress().getHostName());
         this.session = session;
         session.setIdleTimeout(0);
         connected = true;
@@ -41,7 +41,7 @@ public abstract class ClientWebSocket {
 
     @OnWebSocketClose
     public void onClose(final int statusCode, final String reason) {
-        LOGGER.info("Connection closed on {}: {} - {}", session.getRemoteAddress(), statusCode, reason);
+        LOGGER.info("WS Connection closed on {}: {} - {}", session.getRemoteAddress(), statusCode, reason);
         connected = false;
         this.session = null;
     }
@@ -74,7 +74,7 @@ public abstract class ClientWebSocket {
 
     public void close() {
         if (session != null) {
-            session.close(StatusCode.NORMAL, "Application exit.");
+            session.close(StatusCode.NORMAL, "Close connection.");
         }
     }
 
