@@ -1,19 +1,6 @@
 package com.nedap.retail.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.google.common.collect.ImmutableMap;
 import com.nedap.retail.example.rest.ApiCaller;
 import com.nedap.retail.example.rest.HttpRequestException;
 import com.nedap.retail.example.rest.InputParsingException;
@@ -23,6 +10,19 @@ import com.nedap.retail.renos.api.v2.rest.message.*;
 import com.nedap.retail.renos.api.v2.rest.message.Settings.LightAndSoundStatus;
 import com.nedap.retail.renos.api.v2.ws.message.EventType;
 import com.nedap.retail.renos.api.v2.ws.message.Subscribe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class Application {
 
@@ -36,6 +36,10 @@ public class Application {
     public static void main(final String[] args) {
         if (args.length == 0) {
             LOG.info("Please use URL of device as parameter, for example: http://localhost:8081");
+            LOG.info("To run a benchmark: pass a filename and the number of repeats after the URL.");
+            LOG.info("One or two values are allowed.");
+            LOG.info("The first is used for repetitions of the total list of queries.");
+            LOG.info("The second is used for repetitions of the individual queries.");
             System.exit(0);
         }
 
@@ -46,29 +50,108 @@ public class Application {
         LOG.info("Application starting...");
         client = new RenosWebSocketClient(baseUrl);
 
-        try (BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(System.in))) {
+        try {
             client.run();
 
-            String input;
-            while (true) {
-                printMenu();
+            if (args.length > 3) {
+                runBenchmark(Integer.parseInt(args[1]), Integer.parseInt(args[2]), args[3]);
+                return;
+            } else if (args.length > 2) {
+                runBenchmark(Integer.parseInt(args[1]), 1, args[2]);
+                return;
+            }
 
-                // get choice
-                input = inputBuffer.readLine();
+            try (final BufferedReader inputBuffer = new BufferedReader(new InputStreamReader(System.in))) {
 
-                // exit if no choice made
-                if (input.isEmpty()) {
-                    break;
+                String input;
+                while (true) {
+                    printMenu();
+
+                    // get choice
+                    input = inputBuffer.readLine();
+
+                    // exit if no choice made
+                    if (input.isEmpty()) {
+                        break;
+                    }
+
+                    // check what choice has been made
+                    handleCommand(inputBuffer, input.charAt(0));
                 }
-
-                // check what choice has been made
-                handleCommand(inputBuffer, input.charAt(0));
+            } catch (final Exception e) {
+                LOG.error("An error has occurred, system will exit", e);
             }
         } catch (final Exception e) {
             LOG.error("An error has occurred, system will exit", e);
         } finally {
             client.finish();
         }
+
+    }
+
+    private static void runBenchmark(final int macroRepetitions, final int microRepetitions, final String fileName) {
+        LOG.info(
+                "Benchmarking.. All queries {} times and each individual query {} times. Output to {}",
+                macroRepetitions, microRepetitions, fileName
+        );
+
+        final Map<String, ThrowingRunnable<?>> actionMap = ImmutableMap.of(
+                "Rest API heartbeat", () -> api.heartbeat(),
+                "Websocket heartbeat", () -> client.heartbeat(),
+                "Group info", () -> api.retrieveGroupInfo(),
+                "System info", () -> api.retrieveSystemInfo(),
+                "System status", () -> api.retrieveSystemStatus()
+        );
+
+        final Map<String, List<Double>> results = actionMap.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> new ArrayList<>()));
+
+        IntStream.range(0, macroRepetitions)
+                .forEach(i -> actionMap.forEach((name, action) -> timeAction(action, microRepetitions)
+                        .ifPresent(results.get(name)::add)));
+        try (final PrintWriter writer = new PrintWriter(new FileWriter(new File(fileName)))) {
+            // Header, each column is a query.
+            writer.println(
+                    results.keySet()
+                            .stream()
+                            .map(key -> String.format("\"%s\"", key))
+                            .collect(Collectors.joining(","))
+            );
+
+            // Each macro-repetition is a row.
+            IntStream.range(0, macroRepetitions).forEach(i -> writer.printf(
+                    "\"%s\"%n",
+                    results.values().stream().map(values -> values.get(i))
+                            .map(value -> Double.toString(value))
+                            .collect(Collectors.joining("\",\""))
+            ));
+        } catch (final IOException e) {
+            LOG.error("Failed to open file {}!", fileName, e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable<T extends Throwable> {
+        void run() throws T;
+    }
+
+    private static <T extends Throwable> long timeAction(final ThrowingRunnable<T> timedAction) throws T {
+        final long before = System.nanoTime();
+        timedAction.run();
+        return System.nanoTime() - before;
+    }
+
+    private static <T extends Throwable> Optional<Double> timeAction(final ThrowingRunnable<T> timedAction, final int repeats) {
+        try {
+            double total = 0;
+            for (int i = 0; i < repeats; i++) {
+                total += timeAction(timedAction);
+            }
+            return Optional.of(total / repeats / 1_000_000D);
+        } catch (final Throwable throwable) {
+            LOG.error("Something's up with that action! {}", throwable.getMessage());
+        }
+        return Optional.empty();
     }
 
     private static String trimTrailingSlash(final String baseUrl) {
@@ -94,8 +177,7 @@ public class Application {
         LOG.info("------------------------------------------------------");
     }
 
-    private static void handleCommand(final BufferedReader inputBuffer, final char keycode)
-            throws IOException, InterruptedException, URISyntaxException {
+    private static void handleCommand(final BufferedReader inputBuffer, final char keycode) {
         try {
             switch (keycode) {
                 case 'a':
@@ -192,7 +274,7 @@ public class Application {
                 }
             }
             if (group.aisles != null) {
-                LOG.info("  Aisles: {}", group.aisles.stream().map((a) -> a.id).collect(Collectors.toList()));
+                LOG.info("  Aisles: {}", group.aisles.stream().map(a -> a.id).collect(Collectors.toList()));
             }
         }
     }
@@ -240,7 +322,7 @@ public class Application {
     }
 
     private static LightAndSoundStatus getLightAndSoundSelection(final BufferedReader inputBuffer)
-            throws InputParsingException, HttpRequestException {
+            throws InputParsingException {
         LOG.info("1. Light and sound");
         LOG.info("2. Lights only");
         LOG.info("3. None");
@@ -318,8 +400,7 @@ public class Application {
         api.sendBlink(request);
     }
 
-    private static void subscribeToEvents(final BufferedReader inputBuffer)
-            throws InputParsingException, HttpRequestException {
+    private static void subscribeToEvents(final BufferedReader inputBuffer) throws InputParsingException {
         LOG.info("Subscribe to: ");
         LOG.info("1. RF Alarm events");
         LOG.info("2. RFID Alarm events");
@@ -352,41 +433,26 @@ public class Application {
         client.sendSubscription(subscribe);
     }
 
-    private static EventType[] parseEventTypes(final String selection) throws InputParsingException {
-        final List<EventType> selectedEvents = new ArrayList<>();
-        for (final String option : selection.split(",")) {
-            switch (option.trim()) {
-                case "1":
-                    selectedEvents.add(EventType.RF_ALARM);
-                    break;
-                case "2":
-                    selectedEvents.add(EventType.RFID_ALARM);
-                    break;
-                case "3":
-                    selectedEvents.add(EventType.IR_DIRECTION);
-                    break;
-                case "4":
-                    selectedEvents.add(EventType.METAL_ALARM);
-                    break;
-                case "5":
-                    selectedEvents.add(EventType.RFID_OBSERVATION);
-                    break;
-                case "6":
-                    selectedEvents.add(EventType.RFID_MOVE);
-                    break;
-                case "7":
-                    selectedEvents.add(EventType.INPUT_OBSERVATION);
-                    break;
-                case "8":
-                    selectedEvents.add(EventType.SD_LABEL_DETECT);
-                    break;
-                case "all":
-                    return EventType.values();
-                default:
-                    throw new InputParsingException("Unsupported option value " + option);
-            }
+    private static EventType[] parseEventTypes(final String selection) {
+        if (selection.contains("all")) {
+            return EventType.values();
         }
-        return selectedEvents.toArray(new EventType[selectedEvents.size()]);
+
+        final Map<String, EventType> optionMap = ImmutableMap.<String, EventType>builder()
+                .put("1", EventType.RF_ALARM)
+                .put("2", EventType.RFID_ALARM)
+                .put("3", EventType.IR_DIRECTION)
+                .put("4", EventType.METAL_ALARM)
+                .put("5", EventType.RFID_OBSERVATION)
+                .put("6", EventType.RFID_MOVE)
+                .put("7", EventType.INPUT_OBSERVATION)
+                .put("8", EventType.SD_LABEL_DETECT)
+                .build();
+
+        return Stream.of(selection.split(","))
+                .filter(optionMap::containsKey)
+                .map(optionMap::get)
+                .toArray(EventType[]::new);
     }
 
     private static <T> T readAndRethrow(final BufferedReader inputBuffer, final Function<String, T> function,
