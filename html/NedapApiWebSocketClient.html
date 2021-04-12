@@ -63,20 +63,20 @@
 
         function onClose(event, url) {
             document.getElementById('initButton').disabled = false;
-          document.getElementById('closeButton').disabled = true;
-          document.getElementById('subscribe').disabled = true;
-          document.getElementById('heartbeat').disabled = true;
+            document.getElementById('closeButton').disabled = true;
+            document.getElementById('subscribe').disabled = true;
+            document.getElementById('heartbeat').disabled = true;
 
-          if (document.getElementById('autoReconnect').checked) {
-            if(event.code) {
-                writeError("Something went wrong. Response code: " + event.code);
-            } else {
-                writeToScreen("Disconnected from Renos API WebSocket server " + url);
+            if (document.getElementById('autoReconnect').checked) {
+                if(event.code) {
+                    writeError("Something went wrong. Response code: " + event.code);
+                } else {
+                    writeToScreen("Disconnected from Renos API WebSocket server " + url);
+                }
+                if (document.getElementById('autoReconnect').checked) {
+                    reconnect();
+                }
             }
-                      if (document.getElementById('autoReconnect').checked) {
-
-            reconnect();
-          }
         }
 
         function onMessage(event) {
@@ -214,6 +214,7 @@
         <legend>Subscribe to events</legend>
 
         <input type="checkbox" id="rfEvents" value="rf_alarm"/> RF alarm events<br/>
+        <input type="checkbox" id="rfJammer" value="rf_jammer"/> RF jammer events<br/>
         <input type="checkbox" id="rfidEvents" value="rfid_alarm"/> RFID alarm events<br/>
         <input type="checkbox" id="rfidObservation" value="rfid_observation"/> RFID observation events<br/>
         <input type="checkbox" id="rfidMove" value="rfid_move"/> RFID move events<br/>
