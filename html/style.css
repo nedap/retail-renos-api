@@ -1,4 +1,13 @@
-span.textfield {
+span#textfield {
     display:inline-block;
     width:120px;
+}
+
+div#output {
+	width:auto;
+}
+
+div#events {
+	height: 400px;	
+    overflow-y: auto;
 }
