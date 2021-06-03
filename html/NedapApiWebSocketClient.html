@@ -63,20 +63,20 @@
 
         function onClose(event, url) {
             document.getElementById('initButton').disabled = false;
-          document.getElementById('closeButton').disabled = true;
-          document.getElementById('subscribe').disabled = true;
-          document.getElementById('heartbeat').disabled = true;
+            document.getElementById('closeButton').disabled = true;
+            document.getElementById('subscribe').disabled = true;
+            document.getElementById('heartbeat').disabled = true;
 
-          if (document.getElementById('autoReconnect').checked) {
-            if(event.code) {
-                writeError("Something went wrong. Response code: " + event.code);
-            } else {
-                writeToScreen("Disconnected from Renos API WebSocket server " + url);
+            if (document.getElementById('autoReconnect').checked) {
+                if(event.code) {
+                    writeError("Something went wrong. Response code: " + event.code);
+                } else {
+                    writeToScreen("Disconnected from Renos API WebSocket server " + url);
+                }
+                if (document.getElementById('autoReconnect').checked) {
+                    reconnect();
+                }
             }
-                      if (document.getElementById('autoReconnect').checked) {
-
-            reconnect();
-          }
         }
 
         function onMessage(event) {
@@ -101,16 +101,22 @@
                 switch (response.event) {
                 case 'rfid_alarm':
                     text += ' epc: ' + response.epc;
-                    writeToScreen('<span style="color: green;">' + text + '.</span>');
+                    writeToScreen('<span style="color: orange;">' + text + '.</span>');
                     break;
                 case 'rfid_observation':
                     text += ' with epcs:';
-                    writeToScreen('<span style="color: green;">' + text + '.</span>');
+                    writeToScreen('<span style="color: orange;">' + text + '.</span>');
                     printEpcs(response.epc_list);
                     break;
                 case 'rfid_move':
-                    writeToScreen('<span style="color: green;">' + text + '.</span>');
+                    writeToScreen('<span style="color: orange;">' + text + '.</span>');
                     printEpcs(response.epc_list);
+                    break;
+                case 'rf_alarm':
+                    writeToScreen('<span style="color: red;">' + text + '.</span>');
+                    break;
+                case 'rf_jammer':
+                    writeToScreen('<span style="color: blue;">' + text + '.</span>');
                     break;
                 default:
                     writeToScreen('<span style="color: green;">' + text + '.</span>');
@@ -123,7 +129,7 @@
         function printEpcs(epcs) {
             for (i = 0; i < epcs.length; i++) {
                 var epc = epcs[i];
-                var text = '<span style="color: green;">&nbsp;&nbsp&nbsp&nbsp' + epc.epc + ' at ' + epc.time;
+                var text = '<span style="color: orange;">&nbsp;&nbsp&nbsp&nbsp' + epc.epc + ' at ' + epc.time;
                 if (epc.eas_status != null) {
                     text += ' with status ' + epc.eas_status;
                 }
@@ -177,7 +183,16 @@
             var pre = document.createElement('p');
             pre.style.workWrap = "break-word";
             pre.innerHTML = message;
-            output.appendChild(pre);
+            events.appendChild(pre);
+            updateScroll();
+        }
+
+        function updateScroll() {
+            events.scrollTop = events.scrollHeight;
+        }
+
+        function emptyEvents() {
+            events.innerHTML = ''
         }
 
         function prependCurrentTime(message) {
@@ -209,11 +224,13 @@
         <button id="heartbeat" onclick="sendHeartbeat()">Send heartbeat</button>
     </fieldset>
 </div>
+<p>
 <div id="subscription" style="width:400px">
     <fieldset>
         <legend>Subscribe to events</legend>
 
         <input type="checkbox" id="rfEvents" value="rf_alarm"/> RF alarm events<br/>
+        <input type="checkbox" id="rfJammer" value="rf_jammer"/> RF jammer events<br/>
         <input type="checkbox" id="rfidEvents" value="rfid_alarm"/> RFID alarm events<br/>
         <input type="checkbox" id="rfidObservation" value="rfid_observation"/> RFID observation events<br/>
         <input type="checkbox" id="rfidMove" value="rfid_move"/> RFID move events<br/>
@@ -228,6 +245,12 @@
         <button id="subscribe" onclick="subscribe()">Subscribe</button>
     </fieldset>
 </div>
-<div id="output"></div>
+<p>
+<div id="output">
+    <fieldset>
+        <legend>Events <button id="clear" onclick="emptyEvents()">clear</button></legend>
+        <div id="events"></div>
+    </fieldset>
+</div>
 </body>
 </html>
