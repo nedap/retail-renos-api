@@ -8,11 +8,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Optional;
 
-import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.renos.api.v2.rest.RestMessageParser;
 import com.nedap.retail.renos.api.v2.rest.message.*;
 

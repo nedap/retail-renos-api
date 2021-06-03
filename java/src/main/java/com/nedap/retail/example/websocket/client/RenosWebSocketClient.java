@@ -1,6 +1,5 @@
 package com.nedap.retail.example.websocket.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nedap.retail.renos.api.v2.ws.MessageParser;
 import com.nedap.retail.renos.api.v2.ws.message.Heartbeat;
 import com.nedap.retail.renos.api.v2.ws.message.Authenticate;
@@ -122,7 +121,7 @@ public class RenosWebSocketClient extends WebSocketClient {
         }
     }
 
-    public void heartbeat() throws JsonProcessingException {
+    public void heartbeat() {
         eventsSocket.sendMessage(MessageParser.toJson(new Heartbeat()));
     }
 
