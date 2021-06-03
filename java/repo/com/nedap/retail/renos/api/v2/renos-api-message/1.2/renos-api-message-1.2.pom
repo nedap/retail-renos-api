@@ -13,9 +13,9 @@
 
     <groupId>com.nedap.retail.renos.api.v2</groupId>
     <artifactId>renos-api-message</artifactId>
-    <version>1.2</version>
     <!-- <version/> is not defined because we want to inherit the parent (Renos) version -->
     <packaging>jar</packaging>
+    <version>1.2</version>
 
     <name>Renos API v2 Message Parser</name>
     <properties>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>com.nedap.retail</groupId>
             <artifactId>renos-json</artifactId>
-            <version>develop-SNAPSHOT</version>
+            <version>1.2</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
