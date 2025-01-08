@@ -9,7 +9,7 @@ Java reference implementation and test tool.
 	mvn clean install
 
 ## To run the code
-	java -jar target/websocket-client-example-1.0-jar-with-dependencies.jar http://<unit ip address>
+	java -jar target/websocket-client-example-1.2-jar-with-dependencies.jar http://<unit ip address>
 
 # API dependency
 The example code depends on an API library `renos-api-message`. This API library is provided within the `java/repo` directory, which is a file-based maven repository.
