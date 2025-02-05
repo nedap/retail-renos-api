@@ -115,9 +115,6 @@
                 case 'rf_alarm':
                     writeToScreen('<span style="color: red;">' + text + '.</span>');
                     break;
-                case 'rf_jammer':
-                    writeToScreen('<span style="color: blue;">' + text + '.</span>');
-                    break;
                 default:
                     writeToScreen('<span style="color: green;">' + text + '.</span>');
                 }
@@ -230,7 +227,6 @@
         <legend>Subscribe to events</legend>
 
         <input type="checkbox" id="rfEvents" value="rf_alarm"/> RF alarm events<br/>
-        <input type="checkbox" id="rfJammer" value="rf_jammer"/> RF jammer events<br/>
         <input type="checkbox" id="rfidEvents" value="rfid_alarm"/> RFID alarm events<br/>
         <input type="checkbox" id="rfidObservation" value="rfid_observation"/> RFID observation events<br/>
         <input type="checkbox" id="rfidMove" value="rfid_move"/> RFID move events<br/>
