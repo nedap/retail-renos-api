@@ -1,0 +1,61 @@
+---
+name: Dependency snapshot
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  dependency_snapshot:
+    name: Submit the SBOM to the dependency graph
+    # Dependabot reads pom.xml only, so it never sees transitive libraries. GitHub raises
+    # alerts for the default branch alone.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write       # the dependency submission API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Generate the SBOM
+        working-directory: java
+        # Resolves the dependency closure without compiling, so a current JDK is fine for
+        # the Java 8 sources. Test scope is excluded by default.
+        run: |
+          mvn -B --no-transfer-progress org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeAggregateBom \
+            -DoutputFormat=json -DoutputName=sbom
+      - name: Convert the SBOM to a dependency snapshot
+        env:
+          TRIVY_VERSION: 0.76.1
+          TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+        run: |
+          curl -sSfL --retry 3 --retry-all-errors -o "$RUNNER_TEMP/trivy.tar.gz" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/trivy.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+          # No scanners: trivy only converts, so it needs no vulnerability database.
+          "$RUNNER_TEMP/trivy" sbom --quiet --scanners '' --skip-db-update --skip-java-db-update \
+            --offline-scan --format github --output "$RUNNER_TEMP/snapshot.json" \
+            java/target/sbom.json
+          # An empty snapshot would silently clear every alert it replaces.
+          jq -e '[.manifests[].resolved | length] | add > 0' "$RUNNER_TEMP/snapshot.json"
+      - name: Submit the snapshot
+        # A manual run is a dry run: only a push to the default branch submits.
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A 201 does not mean accepted: like GitHub's dependency-submission-toolkit, treat any
+        # result other than SUCCESS or ACCEPTED as a failed submission.
+        run: |
+          result=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/dependency-graph/snapshots" \
+            --input "$RUNNER_TEMP/snapshot.json" --jq .result)
+          echo "Dependency submission: $result"
+          [[ "$result" == SUCCESS || "$result" == ACCEPTED ]]

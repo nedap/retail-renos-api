@@ -20,3 +20,18 @@ updates:
       # Internal Nedap artifacts live in private GitHub Packages and are bumped by hand.
       - dependency-name: "com.nedap.*"
       - dependency-name: "com.nedap:*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+    # Give a freshly published (potentially poisoned) tag time to be caught before we adopt it.
+    cooldown:
+      default-days: 4
+    groups:
+      github-actions-all:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
