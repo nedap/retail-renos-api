@@ -14,7 +14,7 @@
         <jettyVersion>9.4.58.v20250814</jettyVersion>
         <slf4jVersion>2.0.20</slf4jVersion>
         <jacksonVersion>2.13</jacksonVersion>
-        <commons-codec.version>1.15</commons-codec.version>
+        <commons-codec.version>1.23.0</commons-codec.version>
         <java.version>1.8</java.version>
     </properties>
 
@@ -60,7 +60,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.1</version>
+                <version>1.6.0</version>
                 <executions>
                     <execution>
                         <goals>
