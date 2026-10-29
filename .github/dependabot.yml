@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  - package-ecosystem: "maven"
+    directory: "/java"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+    groups:
+      patch-updates:
+        update-types: ["patch"]
+      minor-updates:
+        update-types: ["minor"]
+    ignore:
+      # Majors need code changes; security updates are not affected by this rule.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # Internal Nedap artifacts live in private GitHub Packages and are bumped by hand.
+      - dependency-name: "com.nedap.*"
+      - dependency-name: "com.nedap:*"
