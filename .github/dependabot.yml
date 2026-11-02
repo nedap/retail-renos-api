@@ -20,6 +20,9 @@ updates:
       # Internal Nedap artifacts live in private GitHub Packages and are bumped by hand.
       - dependency-name: "com.nedap.*"
       - dependency-name: "com.nedap:*"
+      # From 2.11 the PolymorphicTypeAdapterFactory in renos-api-message 1.2 fails to parse messages.
+      - dependency-name: "com.google.code.gson:gson"
+        versions: [">= 2.11"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
