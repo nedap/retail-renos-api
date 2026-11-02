@@ -21,6 +21,7 @@ updates:
       - dependency-name: "com.nedap.*"
       - dependency-name: "com.nedap:*"
       # From 2.11 the PolymorphicTypeAdapterFactory in renos-api-message 1.2 fails to parse messages.
+      # Unlike update-types, this also holds back security updates: a gson fix only in 2.11+ needs a new renos-json.
       - dependency-name: "com.google.code.gson:gson"
         versions: [">= 2.11"]
 
